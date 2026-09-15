@@ -1,0 +1,187 @@
+OpenConnect GUI native inputs
+
+Original bridge, patch, manifests and build scripts: Copyright (C) 2026
+OpenConnect GUI contributors; GPL-3.0-only. See licenses/GPL-3.0-only.txt.
+
+OpenConnect 9.21 is preserved verbatim in vendor/openconnect-9.21.tar.gz,
+with its detached release signature and the signing public key. Its header
+is copied verbatim to include/openconnect.h. Upstream copyright notices,
+component licenses and complete source are retained inside the archive;
+licenses/COPYING.LGPL is also extracted for distribution. OpenConnect is
+LGPL-2.1-only. Combining our GPL-3.0-only bridge with the library makes the
+combined work GPL-3.0-only without removing upstream notices or rights in
+the unmodified upstream source. No code is copied from the reference GUI.
+
+sources.json records URLs, SHA256 values and the official-page-published
+signer fingerprint. The release signature was actually verified at input
+acquisition; builds recheck digests and verify VALIDSIG using an isolated
+GnuPG home. This is fingerprint-pinned verification, not a Web of Trust claim.
+
+Invocation from workspace root:
+  python3 native/build.py --target host --dependency-prefix /target/deps
+The prefix flag is optional on Linux/macOS. Linux selects /opt/ocvpn-deps
+when present, otherwise collects the Debian/Ubuntu /usr dependency closure
+under target/native/<triple>/dependencies. Other Linux distributions can
+provide an explicit prefix. macOS discovers brew --prefix, which must retain
+the required license inventory. Windows requires an explicit MinGW prefix.
+Explicit targets: x86_64-unknown-linux-gnu, x86_64-apple-darwin,
+aarch64-apple-darwin, x86_64-pc-windows-msvc. Use each target's native runner.
+Windows invokes Python from MSYS2 and builds the C ABI with MinGW-w64 GCC;
+the consuming Rust application remains MSVC. Python >=3.10 needs the tarfile
+security backport (data_filter). No host package installation is performed.
+
+Linux container, with Docker context native/:
+  docker build -f native/Dockerfile.linux -t ocvpn-native-linux native
+  docker run --rm --user 1000:1000 --mount type=bind,src="$PWD",dst=/workspace ocvpn-native-linux
+Only the repository is mounted. No host root mount, privileged flag or
+network/administrative capability is needed. The image uses Ubuntu 22.04
+native development packages; prepare-linux-prefix.py stages the recursive
+ELF dependency closure and retains distro versions and license texts. The
+image is a development recipe, not a source-locked release environment.
+
+Artifacts:
+  target/native/<resolved Rust triple>/source/openconnect-9.21/
+  target/native/<resolved Rust triple>/stage/ocvpn-native/
+The stage contains lib/, include/, share/licenses/ and native-manifest.json.
+Its openconnect field is the upstream release (9.21); runtime_version is the
+exact generated version.c identity (v9.21-unknown for this archive build).
+The recipe rejects unexpected suffixes and removes inherited RPM version/
+release and GIT_DIR overrides before generating the native version.
+The manifest records actual dependency versions, bridge ABI, enforced HPKE
+capability, and file digests. Repeated builds take an OS file lock and rebuild
+only source/stage covered by the target's .ocvpn-build-owner.json marker.
+Symlinked output roots and unowned or redirected source/stage are rejected.
+Legacy outputs created before ownership markers must be relocated explicitly
+once. The lock is released when the process exits; it is not a PID guess.
+Package tooling
+must install this stage in the application-owned trusted location. Never
+load it from CWD or a path selected by a frontend. Library names and exports
+follow upstream libtool, with ocgui_* functions in the same DLL/shared object.
+
+The prefix must contain target-native shared dependencies and complete
+share/licenses material. dependencies.json lists capability minima, not
+source locks for all transitive libraries. Full source-locked dependency
+releases are not delivered by this development recipe. Runtime closure is
+checked and local loader paths are rewritten; Windows signed Wintun 0.14.1
+is downloaded with SHA256 verification and its binary license retained.
+macOS binaries require signing after install-name rewriting.
+
+The build patches include the bridge and its ABI4 exports. The narrow GnuTLS
+peer-policy patch exposes both successful and failed trust/hostname decisions
+with callback-scoped certificate chains; absent a policy, upstream semantics
+remain unchanged. Identical-certificate rehandshakes recheck policy and host.
+Policy consumers must check exact host+port pins via the upstream hash API;
+accepting one host never grants trust to a redirect host.
+The HOTP patch treats failed counter commits as generation failures and wipes
+the generated option before any submission. Consumers must abort on callback
+failure rather than follow upstream's manual-token fallback.
+The Array patch removes an unconditional upstream stdout debug print so the
+library cannot corrupt its caller's structured CLI/IPC output.
+Command handles are independently duplicated and non-inheritable; callers
+serialize send/close while native context destruction may race sends. Unix
+uses fd writes with thread-local SIGPIPE protection, Windows uses Winsock
+duplication and send. See bridge/ocgui.h for ownership and error contracts.
+The Unix script child retains its service-owned worker process group so
+cancellation reaches network helpers. Protected inherited lifetime leases
+also prevent journal recovery while orphaned mutator descendants remain.
+Unix private worker IPC descriptors are close-on-exec; lifetime descriptors
+deliberately survive native helper exec.
+Private TUN fields are configured in C using matching native strdup/free;
+mainloop still decides when to create TUN. The resolver bridge calls native
+getaddrinfo/freeaddrinfo; Rust must not construct or free addrinfo lists.
+The fixed progress sink is borrowed, synchronous, bounded and unredacted;
+consumers must redact/filter before diagnostics.
+
+The GP prelogin browser negotiation patch adapts the protocol value mappings,
+parameter placement and saml-default-browser advertisement semantics from
+yuezk/GlobalProtect-openconnect (GPL-3.0), pinned commit
+9e4f45997ebee452c58d7d3066dcfc175d65ef82:
+https://github.com/yuezk/GlobalProtect-openconnect/tree/9e4f45997ebee452c58d7d3066dcfc175d65ef82
+Reference paths: crates/gpapi/src/params/portal_prelogin.rs,
+crates/gpapi/src/params/gateway_prelogin.rs,
+crates/gpapi/src/os_profile/mod.rs and crates/gpapi/src/portal/prelogin.rs.
+This does not copy or depend on its proprietary GUI wrapper. The patch keeps
+the pinned native HTTP/TLS and portal/gateway authentication implementation.
+An explicit negative browser advertisement permits one requested embedded
+prelogin retry per phase, never after authentication rejection. Missing or
+malformed advertisements remain unknown. Reported Linux, Mac and Windows
+identities determine negotiation. Other reported platforms preserve upstream
+prelogin without inventing a browser value; system-browser SSO is unsupported.
+The configured preference is retained independently for gateway prelogin.
+The GP SAML field patch preserves the detector's actual cookie field name
+instead of submitting browser tokens as passwd. Independently requested
+gateway SAML has a fresh account field and cannot silently reuse the portal's
+ordinary-password retry path. Explicit portal-cookie reuse remains intact.
+The command-descriptor initialization patch prevents freeing a context without
+a command pipe from closing the caller's descriptor zero.
+
+Offline browser certificate verification uses the same native GnuTLS runtime,
+DER SubjectPublicKeyInfo hash construction as gnutls.c, and upstream pin
+comparison on an owned temporary OpenConnect context. A supplied pin is the
+only authority; without one, system/explicit PEM CA roots, chain validity,
+TLS-server key purpose/usage and hostname are checked. The verifier does not
+fetch AIA/OCSP data, so offline verification is not online revocation proof.
+Certificate buffers are borrowed, bounded and never logged. See ocgui.h for
+exact output sizes, ownership, return codes and caller host-scoping duties.
+
+Native verification entrypoint:
+  cargo xtask verify protocols
+It builds development-only Rust drivers and installs pinned Python fixture
+dependencies into target/fixture-venv. The signed upstream TLS fixtures run
+on loopback with fresh private test certificates; no host trust changes.
+Linux execution has verified real authentication for Cisco multicert,
+Juniper, Pulse, GP, F5 and Fortinet, including separate GP MFA and portal-cookie
+cases. Array coverage is protocol selection and TLS rejection, not successful
+authentication. Strict redirect pinning, command-handle lifetime and failed
+HOTP commits are exercised against the actual library. The HOTP fixture
+observes endpoint counts only and verifies no uncommitted OTP was submitted.
+The Cisco fixture requires pyOpenSSL 25.3.0: version 26 removed its upstream
+X509.get_extension dependency. Browser SSO, tunneling, native cross-platform
+acceptance and vendor appliance interoperability are separate obligations.
+
+Linux native WebKit SSO has additionally been exercised against the signed
+upstream GP fixture with independent portal/gateway SAML, required JavaScript
+and comments-only completion. Both identical and different confirmed accounts
+were checked; observed submissions used prelogin-cookie, never passwd, and
+the final native handoff matched the confirmed gateway account. This is
+authentication proof, not tunnel or vendor-appliance interoperability.
+The offline certificate-policy driver checks preservation of caller-owned
+stdin as well as custom CA, hostname and strict host/port pin decisions.
+
+Unix network lifecycle fork:
+packaging/common/vpnc-script retains the GPL-2.0-or-later copyright/license
+notice and the executed do_connect/do_disconnect orchestration from
+vpnc-scripts ce9e961bd0f6b867e1c7c35f78f6fb973f6ff101. Its route, interface
+and resolver mutation functions now use an acknowledged private pipe protocol
+to the ocvpn-net journal owner, not an arbitrary executable or shell command.
+Connect and reconnect invoke do_connect; disconnect invokes do_disconnect
+before reverse-order conditional journal recovery. An unknown, repeated or
+omitted operation is an error. Each operation's intent is durable before
+mutation and its observed result is durable before shell acknowledgement.
+An interrupted unobserved operation remains explicit recovery state.
+
+Reviewed differences: only Linux and Darwin are supported by this Unix fork.
+Linux retains nss-resolve/managed-resolv.conf detection and preference for
+systemd-resolved, then resolvconf. Darwin uses utun dynamic-store DNS and
+IPv4/IPv6 service keys. Backend changes after preflight abort connect.
+Disconnect uses the journaled backend rather than today's resolver preference.
+DNS writes/restores are per-link/per-service/per-field; physical-service
+networksetup preferences, global resolv.conf backups and unconditional scutil
+key removal are deliberately not used. Split domains use resolved routing
+domains or Darwin SupplementalMatchDomains. resolvconf cannot represent split
+DNS and returns an explicit error rather than leaking those queries.
+
+The validated route planner normalizes IPv4/IPv6 includes/excludes and
+connected-prefix overrides before passing route lists to the upstream loops.
+Full tunnels use explicit paired /1 routes without replacing physical /0s.
+Physical transport and exclusion bypasses precede interface configuration.
+Kernel-generated address routes and Linux address-generation mode are in the
+preflight inventory. Device creation, module loading, discovery of hooks,
+configuration sourcing, backup-file writes and unrelated OS branches were
+removed. The native owner preserves the boot/interface identity and restores
+only values still matching the transaction's observed/intended ownership.
+The installed script is opened without following symlinks, ownership-checked,
+byte-checked against the embedded asset, and executed by its open descriptor.
+All subprocesses remain within the supervised worker lifetime and deadlines.
+Native Linux/Darwin tunnel, resolver, reconnect and crash-recovery acceptance
+must be exercised on isolated native runners; this notice asserts no OS run.

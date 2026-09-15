@@ -1,0 +1,35 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "OpenConnect GUI",
+  "version": "0.1.0",
+  "identifier": "org.openconnectgui.app",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://127.0.0.1:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [{
+      "label": "main",
+      "title": "OpenConnect GUI",
+      "create": false,
+      "width": 1080,
+      "height": 720,
+      "minWidth": 760,
+      "minHeight": 560,
+      "decorations": true
+    }],
+    "security": {
+      "capabilities": ["main"],
+      "csp": "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'; font-src 'self'; connect-src ipc: http://ipc.localhost; object-src 'none'; base-uri 'none'; frame-src 'none'; form-action 'none'",
+      "devCsp": "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'; font-src 'self'; connect-src ipc: http://ipc.localhost http://127.0.0.1:1420 ws://127.0.0.1:1420; object-src 'none'; base-uri 'none'; frame-src 'none'; form-action 'none'"
+    }
+  },
+  "bundle": {
+    "active": false,
+    "license": "GPL-3.0-only",
+    "shortDescription": "Open-source OpenConnect desktop client",
+    "icon": ["icons/icon.png", "icons/icon.ico"]
+  }
+}

@@ -1,0 +1,50 @@
+Preserve browser-derived SAML field identity and independently requested accounts.
+Local changes to OpenConnect's LGPL-2.1-only authentication implementation.
+
+--- a/auth-globalprotect.c
++++ b/auth-globalprotect.c
+@@ -191,7 +191,11 @@
+-	if (!ctx->username)
++	if (!ctx->username || saml_path) {
+ 		opt->type = saml_path ? OC_FORM_OPT_SSO_USER : OC_FORM_OPT_TEXT;
+-	else {
++		if (saml_path) {
++			free(ctx->username);
++			ctx->username = NULL;
++		}
++	} else {
+ 		opt->type = OC_FORM_OPT_HIDDEN;
+ 		opt->_value = ctx->username;
+ 		ctx->username = NULL;
+ 	}
+@@ -707 +711 @@
+-	int result, blind_retry = 0;
++	int result, blind_retry = 0, browser_saml = 0;
+@@ -798,6 +802,22 @@
+ 		vpninfo->ocgui_gp_retry_requested = 0;
+ 		if (result)
+ 			goto out;
+ 
++		/* Preserve the detector's credential destination, not passwd. */
++		browser_saml = 0;
++		for (struct oc_form_opt *opt = ctx->form->opts; opt; opt = opt->next) {
++			if (opt->type != OC_FORM_OPT_SSO_TOKEN)
++				continue;
++			if (!vpninfo->sso_token_cookie) {
++				result = -EINVAL;
++				goto out;
++			}
++			free(opt->name);
++			opt->name = vpninfo->sso_token_cookie;
++			vpninfo->sso_token_cookie = NULL;
++			browser_saml = 1;
++			break;
++		}
++
+ 		/* Coming back from SAML we might have been redirected */
+ 		if (vpninfo->redirect_url) {
+@@ -877,3 +897,3 @@
+ 				if (ctx->portal_userauthcookie || ctx->portal_prelogonuserauthcookie ||
+-				    (strcmp(ctx->form->auth_id, "_challenge") && !ctx->alt_secret)) {
++				    (strcmp(ctx->form->auth_id, "_challenge") && !ctx->alt_secret && !browser_saml)) {
+ 					blind_retry = 1;

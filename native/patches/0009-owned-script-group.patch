@@ -1,0 +1,13 @@
+--- a/script.c
++++ b/script.c
+@@ -660,8 +660,7 @@
+ 	pid = fork();
+ 	if (pid == 0) {
+-		/* Child */
+-		if (setpgid(0, 0) < 0)
+-			perror(_("setpgid"));
++		/* Preserve the service-owned worker group for helper cancellation.
++		 * Inherited lifetime leases also protect orphan recovery. */
+ 
+ 		char *script = openconnect_utf8_to_legacy(vpninfo, vpninfo->vpnc_script);
+ 

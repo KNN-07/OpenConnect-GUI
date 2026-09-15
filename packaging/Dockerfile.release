@@ -1,0 +1,28 @@
+# SPDX-License-Identifier: GPL-3.0-only
+FROM ubuntu:22.04@sha256:829f6df217bcbae2b371026e81711d1a787c61b2967ad09d015063663ebafbf7
+ENV DEBIAN_FRONTEND=noninteractive
+# Bootstrap TLS trust from a pinned Ubuntu certificate package, without
+# disabling TLS verification or APT's signed Release/Packages/Sources checks.
+ADD --checksum=sha256:6e8cdcc8c86103acd4fc14649eac62ff2037108389074a7b167567af33c32245 https://snapshot.ubuntu.com/ubuntu/20260901T000000Z/pool/main/c/ca-certificates/ca-certificates_20260601~22.04.1_all.deb /tmp/bootstrap-ca.deb
+RUN dpkg-deb --extract /tmp/bootstrap-ca.deb /tmp/bootstrap-ca && mkdir -p /etc/ssl/certs && cat /tmp/bootstrap-ca/usr/share/ca-certificates/mozilla/*.crt > /etc/ssl/certs/ca-certificates.crt && rm -rf /tmp/bootstrap-ca /tmp/bootstrap-ca.deb
+RUN printf '%s\n' \
+ 'deb [check-valid-until=no] https://snapshot.ubuntu.com/ubuntu/20260901T000000Z jammy main universe' \
+ 'deb [check-valid-until=no] https://snapshot.ubuntu.com/ubuntu/20260901T000000Z jammy-updates main universe' \
+ 'deb [check-valid-until=no] https://snapshot.ubuntu.com/ubuntu/20260901T000000Z jammy-security main universe' \
+ 'deb-src [check-valid-until=no] https://snapshot.ubuntu.com/ubuntu/20260901T000000Z jammy main universe' \
+ 'deb-src [check-valid-until=no] https://snapshot.ubuntu.com/ubuntu/20260901T000000Z jammy-updates main universe' \
+ 'deb-src [check-valid-until=no] https://snapshot.ubuntu.com/ubuntu/20260901T000000Z jammy-security main universe' > /etc/apt/sources.list \
+ && apt-get update && apt-get install -y --no-install-recommends \
+ python3 ca-certificates curl git gnupg build-essential clang libclang-dev \
+ autoconf automake libtool gettext autopoint pkg-config patch patchelf binutils \
+ libgnutls28-dev nettle-dev libgmp-dev libxml2-dev zlib1g-dev libp11-kit-dev \
+ libstoken-dev libpskc-dev libpcsclite-dev libwebkit2gtk-4.1-dev \
+ libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev libssl-dev \
+ rpm dpkg-dev xz-utils file \
+ && rm -rf /var/lib/apt/lists/*
+RUN curl --fail --location https://static.rust-lang.org/rustup/archive/1.28.2/x86_64-unknown-linux-gnu/rustup-init -o /tmp/rustup-init \
+ && echo '20a06e644b0d9bd2fbdbfd52d42540bdde820ea7df86e92e533c073da0cdd43c  /tmp/rustup-init' | sha256sum -c - \
+ && chmod 755 /tmp/rustup-init && /tmp/rustup-init -y --default-toolchain none --profile minimal \
+ && rm /tmp/rustup-init
+ENV PATH=/root/.cargo/bin:$PATH
+WORKDIR /workspace

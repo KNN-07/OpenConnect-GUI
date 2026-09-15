@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "policy": "A dedicated target-native dependency prefix is required. Never use an arbitrary installed OpenConnect. Prefix must contain shared libraries and share/licenses with dependency copyright/license texts. Versions and staged file SHA256 values are recorded in each output manifest. This file constrains capability minima, not a claim that transitive dependency sources have been version-locked.",
+  "pkg_config": {
+    "gnutls": "3.6.13",
+    "nettle": "3.6",
+    "hogweed": "3.6",
+    "gmp": "6.1",
+    "libxml-2.0": "2.9",
+    "zlib": "1.2.11",
+    "p11-kit-1": "0.23",
+    "stoken": "0.92",
+    "libpskc": "2.2.0"
+  },
+  "linux_pkg_config": {"libpcsclite": "1.8"},
+  "platform_token_backend": {"linux": "PC/SC Lite", "macos": "PCSC framework", "windows": "WinSCard"},
+  "crypto": {"tls": "GnuTLS", "hkdf_symbol": "gnutls_hkdf_expand", "hpke": true, "nettle_public_key": "hogweed with GMP, not a missing optional dependency"},
+  "toolchain": {
+    "linux": ["Python >=3.10 with tarfile data_filter backport", "GnuPG", "C compiler", "make", "autoconf", "automake", "libtool", "gettext", "pkg-config", "patch", "patchelf", "readelf"],
+    "macos": ["Python >=3.10 with tarfile data_filter backport", "GnuPG", "Xcode command line tools", "make", "autoconf", "automake", "libtool", "gettext", "pkg-config", "patch", "install_name_tool", "otool"],
+    "windows": ["MSYS2 Python >=3.10 with tarfile data_filter backport", "GnuPG", "MinGW-w64 GCC", "make", "autoconf", "automake", "libtool", "gettext", "pkg-config", "patch", "objdump"]
+  },
+  "windows_driver": {"version": "0.14.1", "url": "https://www.wintun.net/builds/wintun-0.14.1.zip", "sha256": "07c256185d6ee3652e09fa55c0b673e2624b565e02c4b9091c79ca7d2f24ef51", "license": "Archive license must accompany the upstream signed DLL; source GPL-2.0 is not the binary redistribution license."}
+}

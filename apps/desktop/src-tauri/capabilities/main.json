@@ -1,0 +1,8 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "main",
+  "description": "Narrow client actions for the trusted packaged main window only. Authentication windows have no application permissions.",
+  "local": true,
+  "windows": ["main"],
+  "permissions": ["desktop-client", "core:event:allow-listen", "core:event:allow-unlisten"]
+}

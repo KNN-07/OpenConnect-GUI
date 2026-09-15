@@ -1,0 +1,46 @@
+# SPDX-License-Identifier: GPL-3.0-only
+[package]
+name = "ocvpn-desktop"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "ocvpn-gui"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+ocvpn-client = { path = "../../../crates/client" }
+ocvpn-model = { path = "../../../crates/model" }
+tauri = { version = "2", features = ["tray-icon"] }
+tokio.workspace = true
+uuid.workspace = true
+url.workspace = true
+serde_json.workspace = true
+base64 = "0.22.1"
+serde.workspace = true
+zeroize.workspace = true
+rfd = "0.15"
+arboard = "3"
+
+[target.'cfg(target_os = "linux")'.dependencies]
+webkit2gtk = { version = "=2.0.2", features = ["v2_40"] }
+javascriptcore-rs = "=1.1.2"
+zbus = { version = "=4.4.0", default-features = false, features = ["tokio"] }
+
+[target.'cfg(windows)'.dependencies]
+webview2-com = "=0.38.2"
+windows = { version = "=0.61.3", features = ["Win32_System_Com"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "=0.6.4"
+block2 = "=0.6.2"
+objc2-foundation = { version = "=0.3.2", features = ["NSArray", "NSDictionary", "NSDate", "NSString", "NSError", "NSHTTPCookie", "NSURL", "NSURLRequest", "NSURLResponse", "NSURLAuthenticationChallenge", "NSURLProtectionSpace", "NSURLCredential", "NSURLSession", "NSObject"] }
+objc2-web-kit = { version = "=0.3.2", features = ["WKWebView", "WKWebViewConfiguration", "WKWebsiteDataStore", "WKHTTPCookieStore", "WKNavigationDelegate", "WKNavigationAction", "WKNavigationResponse", "WKNavigation", "WKFrameInfo", "WKContentWorld", "WKUserContentController", "objc2-app-kit", "block2"] }
+
+[features]
+custom-protocol = ["tauri/custom-protocol"]

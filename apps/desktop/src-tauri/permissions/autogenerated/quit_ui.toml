@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-quit-ui"
+description = "Enables the quit_ui command without any pre-configured scope."
+commands.allow = ["quit_ui"]
+
+[[permission]]
+identifier = "deny-quit-ui"
+description = "Denies the quit_ui command without any pre-configured scope."
+commands.deny = ["quit_ui"]

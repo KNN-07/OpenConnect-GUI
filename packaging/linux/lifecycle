@@ -1,0 +1,58 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-only
+set -eu
+PATH=/usr/sbin:/usr/bin:/sbin:/bin
+export PATH
+umask 077
+helper=/usr/libexec/openconnect-gui/ocvpn-installer
+case "${OCVPN_PACKAGE_ACTION:-$(basename "$0")}" in
+  preinst) action=prepare ;;
+  postinst) action=install ;;
+  prerm) case "${1:-}" in remove|upgrade|deconfigure) action=remove ;; *) exit 0 ;; esac ;;
+  prepare|install|remove) action="${OCVPN_PACKAGE_ACTION:-$(basename "$0")}" ;;
+  package-lifecycle) action="${1:?Expected prepare, install or remove}" ;;
+  *) echo 'Unknown package lifecycle action' >&2; exit 1 ;;
+esac
+[ "$(id -u)" = 0 ] || { echo 'Package management requires root' >&2; exit 1; }
+result=$(mktemp /var/tmp/ocvpn-package.XXXXXXXX)
+trap 'rm -f "$result"' EXIT HUP INT TERM
+check() {
+  python3 -I - "$helper" <<'PY'
+import os, pathlib, stat, sys
+path = pathlib.Path(sys.argv[1])
+for item in (path, *path.parents):
+    info = item.lstat()
+    if info.st_uid != 0 or info.st_mode & 0o022 or stat.S_ISLNK(info.st_mode):
+        raise SystemExit('Installed helper path is not protected; do not execute it')
+PY
+  "$helper" "$1" > "$result" || { echo 'Service cleanup/registration failed; files preserved. Run ocvpn service repair.' >&2; exit 1; }
+  python3 -I - "$result" "$2" <<'PY'
+import json, sys
+with open(sys.argv[1]) as stream:
+    value = json.load(stream)
+expected = sys.argv[2] == 'true'
+if value.get('registered') is not expected or value.get('approval_required') is not False:
+    raise SystemExit('Service state is not safe for package operation; files preserved')
+PY
+}
+case "$action" in
+ prepare)
+  if [ -e "$helper" ]; then
+    check uninstall false
+  elif [ -e /usr/libexec/openconnect-gui/ocvpnd ] || [ -e /run/openconnect-gui/control.sock ]; then
+    echo 'Existing daemon has no service manager; cleanup cannot be proved. Files preserved.' >&2
+    exit 1
+  fi
+  ;;
+ remove)
+  [ -x "$helper" ] || { echo 'Missing service manager; cannot prove safe removal' >&2; exit 1; }
+  check uninstall false
+  ;;
+ install)
+  # No login registration from this elevated context; settings/CLI perform that
+  # separately in the original user's session after explicit opt-in.
+  /usr/bin/systemd-tmpfiles --create /usr/lib/tmpfiles.d/openconnect-gui.conf
+  check install true
+  ;;
+ *) echo 'Unknown lifecycle command' >&2; exit 1 ;;
+esac

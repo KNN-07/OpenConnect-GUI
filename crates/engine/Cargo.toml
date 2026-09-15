@@ -1,0 +1,39 @@
+[package]
+name = "ocvpn-engine"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+build = "build.rs"
+
+[features]
+# Explicitly unsafe local native verification; never enabled in release interfaces.
+development = []
+
+[dependencies]
+ocvpn-model = { path = "../model" }
+libloading = "0.8.9"
+serde.workspace = true
+serde_json.workspace = true
+sha2 = "0.10.9"
+uuid.workspace = true
+url.workspace = true
+zeroize.workspace = true
+
+[build-dependencies]
+bindgen = "0.71.1"
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61.2", features = ["Win32_UI_Shell", "Win32_UI_Shell_Common", "Win32_System_Com", "Win32_Foundation", "Win32_Security", "Win32_Security_Authorization", "Win32_System_JobObjects", "Win32_System_Threading"] }
+
+[[example]]
+name = "discover"
+required-features = ["development"]
+
+[[example]]
+name = "hotp_commit_fixture"
+required-features = ["development"]
+
+[[example]]
+name = "browser_chain_fixture"
+required-features = ["development"]

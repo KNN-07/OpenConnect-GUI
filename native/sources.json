@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "openconnect": {
+    "version": "9.21",
+    "api_major": 5,
+    "api_minor": 9,
+    "archive": "vendor/openconnect-9.21.tar.gz",
+    "url": "https://www.infradead.org/openconnect/download/openconnect-9.21.tar.gz",
+    "sha256": "5b32369467db6e5f317aa1ed12cfcbb81ed00bdbc765450b6bfcbdc300944a58",
+    "signature": "vendor/openconnect-9.21.tar.gz.asc",
+    "signature_url": "https://www.infradead.org/openconnect/download/openconnect-9.21.tar.gz.asc",
+    "signature_sha256": "6421bb3b81b2c96c54710a96de2d1c512ffbcfc11bbd38fa6a1d168fb2860c45",
+    "signing_key": "vendor/release-signing-key.asc",
+    "signing_key_sha256": "fe42cc1f7c7ebc61310593eaef56819b5285854d1e08c4cb1327c94226e8f058",
+    "signer_fingerprint": "BE07D9FD54809AB2C4B0FF5F63762CDA67E2F359",
+    "fingerprint_source": "https://www.infradead.org/openconnect/download.html",
+    "key_source": "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0xBE07D9FD54809AB2C4B0FF5F63762CDA67E2F359",
+    "header": "include/openconnect.h",
+    "header_sha256": "3b3e444845b47653dbcf6aa67f4a82c99ab4603393560e3edc47906f41e6e029",
+    "license": "LGPL-2.1-only",
+    "license_file": "licenses/COPYING.LGPL",
+    "authentication": "Detached signature verified with GnuPG; VALIDSIG matches the fingerprint published on the official HTTPS release page. Web of Trust certification is not claimed."
+  },
+  "original_bridge_license": "GPL-3.0-only",
+  "combined_library_license": "GPL-3.0-only",
+  "required_capabilities": ["HAVE_HPKE_SUPPORT", "OPENCONNECT_GNUTLS", "HAVE_P11KIT", "HAVE_LIBSTOKEN", "HAVE_LIBPSKC"],
+  "required_protocols": ["anyconnect", "nc", "pulse", "gp", "f5", "fortinet", "array"]
+}

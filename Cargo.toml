@@ -1,0 +1,24 @@
+[workspace]
+resolver = "3"
+members = ["crates/model", "crates/engine", "crates/client", "crates/service", "crates/net", "apps/cli", "apps/desktop/src-tauri", "xtask"]
+default-members = ["apps/cli", "crates/service"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+license = "GPL-3.0-only"
+
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+uuid = { version = "1", features = ["v4", "serde"] }
+url = { version = "2", features = ["serde"] }
+zeroize = { version = "1", features = ["derive"] }
+secrecy = "0.10"
+thiserror = "2"
+ts-rs = { version = "11", features = ["serde-compat", "uuid-impl", "url-impl"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "io-util", "sync", "time", "signal", "process"] }
+clap = { version = "4", features = ["derive"] }
+ocvpn-model = { path = "crates/model" }
+ocvpn-client = { path = "crates/client" }

@@ -1,0 +1,53 @@
+[package]
+name = "ocvpn-client"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[features]
+development = ["ocvpn-engine/development"]
+
+[dependencies]
+ocvpn-model = { path = "../model" }
+ocvpn-engine = { path = "../engine" }
+ocvpn-service = { path = "../service" }
+serde.workspace = true
+serde_json.workspace = true
+uuid.workspace = true
+tokio.workspace = true
+zeroize.workspace = true
+url.workspace = true
+directories = "6"
+fs2 = "0.4"
+base64 = "0.22.1"
+quick-xml = "0.41.0"
+getrandom = "0.3"
+sha2 = "0.10"
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+[target.'cfg(target_os = "linux")'.dependencies]
+keyring = { version = "=3.6.3", default-features = false, features = ["sync-secret-service", "crypto-rust"] }
+dbus-secret-service = { version = "=4.1.0", features = ["crypto-rust"] }
+zbus = { version = "=4.4.0", default-features = false, features = ["tokio"] }
+futures-util = "0.3"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+keyring = { version = "=3.6.3", default-features = false, features = ["apple-native"] }
+
+[target.'cfg(windows)'.dependencies]
+keyring = { version = "=3.6.3", default-features = false, features = ["windows-native"] }
+windows-sys = { version = "0.61.2", features = ["Win32_Foundation", "Win32_Security", "Win32_Security_Authorization", "Win32_Storage_FileSystem", "Win32_System_Pipes", "Win32_System_Threading", "Win32_System_Com", "Win32_System_Registry", "Win32_UI_Shell", "Win32_UI_WindowsAndMessaging"] }
+
+[[example]]
+name = "auth_fixture"
+required-features = ["development"]
+
+[[example]]
+name = "browser_fixture"
+required-features = ["development"]
+
+[[example]]
+name = "browser_peer_fixture"
+required-features = ["development"]

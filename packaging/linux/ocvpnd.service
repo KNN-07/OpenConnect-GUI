@@ -1,0 +1,27 @@
+[Unit]
+Description=OpenConnect GUI privileged tunnel service
+Requires=ocvpnd.socket
+After=network.target ocvpnd.socket
+
+[Service]
+Type=exec
+ExecStart=/usr/libexec/openconnect-gui/ocvpnd --foreground
+Sockets=ocvpnd.socket
+Restart=on-failure
+RestartSec=3
+KillMode=control-group
+TimeoutStopSec=180
+RuntimeDirectory=openconnect-gui
+RuntimeDirectoryMode=0755
+RuntimeDirectoryPreserve=yes
+StateDirectory=openconnect-gui
+StateDirectoryMode=0700
+UMask=0077
+NoNewPrivileges=true
+# Resolver backends update /etc/resolv.conf and create adjacent backups.
+# Keep /usr, /boot and /efi read-only without blocking those DNS operations.
+ProtectSystem=true
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target

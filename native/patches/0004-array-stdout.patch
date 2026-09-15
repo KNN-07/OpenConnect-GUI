@@ -1,0 +1,10 @@
+--- a/array.c
++++ b/array.c
+@@ -133,7 +133,6 @@
+  out:
+ 	if (form) free_auth_form(form);
+ 	if (req_buf) buf_free(req_buf);
+-	printf("obtain return %d\n", ret);
+ 	return ret;
+ }
+ 

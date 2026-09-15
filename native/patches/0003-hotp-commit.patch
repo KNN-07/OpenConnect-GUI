@@ -1,0 +1,35 @@
+--- a/oath.c
++++ b/oath.c
+@@ -688,16 +688,29 @@
+ 		if (ret)
+ 			return ret;
+ 	}
+-	if (gen_hotp(vpninfo, vpninfo->token_time, tokencode))
++	if (gen_hotp(vpninfo, vpninfo->token_time, tokencode)) {
++		if (vpninfo->unlock_token)
++			vpninfo->unlock_token(vpninfo->tok_cbdata, NULL);
++		clear_mem(tokencode, sizeof(tokencode));
+ 		return -EIO;
++	}
+ 
+ 	vpninfo->token_time++;
+ 	vpninfo->token_tries++;
+ 	opt->_value = strdup(tokencode);
++	clear_mem(tokencode, sizeof(tokencode));
+ 	if (vpninfo->unlock_token) {
+ 		char *new_tok = regen_hotp_secret(vpninfo);
+-		vpninfo->unlock_token(vpninfo->tok_cbdata, new_tok);
+-		free(new_tok);
++		/* Never submit until the next counter is committed. NULL still
++		 * releases the lock on regeneration failure. */
++		ret = vpninfo->unlock_token(vpninfo->tok_cbdata, new_tok);
++		if (!new_tok && !ret)
++			ret = -ENOMEM;
++		free_pass(&new_tok);
++		if (ret) {
++			free_pass(&opt->_value);
++			return ret < 0 ? ret : -EIO;
++		}
+ 	}
+ 	return opt->_value ? 0 : -ENOMEM;
+ }

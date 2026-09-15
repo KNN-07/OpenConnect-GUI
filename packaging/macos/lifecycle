@@ -1,0 +1,54 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-only
+set -eu
+PATH=/usr/bin:/bin:/usr/sbin:/sbin
+export PATH
+umask 077
+[ "$(id -u)" = 0 ] || { echo 'Run the package operation with administrator authorization' >&2; exit 1; }
+app='/Applications/OpenConnect GUI.app'
+helper="$app/Contents/MacOS/ocvpn-installer"
+action="${1:?Expected prepare, install or remove}"
+if [ "$action" = prepare ] && [ ! -e "$app" ]; then exit 0; fi
+[ ! -L "$app" ] && [ -x "$helper" ] || { echo 'Installed app is missing or unsafe; preserve files and repair installation' >&2; exit 1; }
+for path in "$app" "$app/Contents" "$app/Contents/MacOS" "$helper"; do
+  [ ! -L "$path" ] && [ "$(/usr/bin/stat -f %u "$path")" = 0 ] || { echo 'Installed helper is not root-owned; do not execute it' >&2; exit 1; }
+  mode=$(/usr/bin/stat -f %Lp "$path")
+  [ "$((0$mode & 022))" = 0 ] || { echo 'Installed helper is writable by another account; files preserved' >&2; exit 1; }
+done
+uid=$(/usr/bin/stat -f %u /dev/console)
+case "$uid" in ''|0|*[!0-9]*) echo 'A logged-in non-root console user is required for SMAppService approval and safe package management' >&2; exit 1 ;; esac
+result=$(/usr/bin/mktemp /var/tmp/ocvpn-package.XXXXXXXX)
+trap 'rm -f "$result"' EXIT HUP INT TERM
+invoke() {
+  /bin/launchctl asuser "$uid" /usr/bin/sudo -u "#$uid" -- "$helper" "$1" > "$result" || { echo 'Native service management failed; application files preserved' >&2; exit 1; }
+}
+field() { /usr/bin/plutil -extract "$1" raw -o - "$result"; }
+case "$action" in
+ prepare|remove)
+  if [ "$action" = remove ]; then
+    invoke login-disable
+    [ "$(field login_registered)" = false ] || { echo 'Login agent remains registered; files preserved' >&2; exit 1; }
+  fi
+  invoke uninstall
+  [ "$(field registered)" = false ] && [ "$(field approval_required)" = false ] || {
+    echo 'Enable OpenConnect GUI in System Settings > General > Login Items, then retry removal/update. Shutdown/recovery is not yet confirmed; files preserved.' >&2
+    exit 1
+  }
+  ;;
+ install)
+  for directory in '/var/run/org.openconnectgui' '/Library/Application Support/OpenConnectGUI' '/Library/Application Support/OpenConnectGUI/network'; do
+    [ ! -L "$directory" ] || exit 1
+    /bin/mkdir -p "$directory"
+    /usr/sbin/chown root:wheel "$directory"
+    /bin/chmod 700 "$directory"
+  done
+  /bin/chmod 755 /var/run/org.openconnectgui
+  invoke install
+  if [ "$(field approval_required)" = true ]; then
+    echo 'Installed; service awaits explicit approval in System Settings > General > Login Items. No tunnel readiness is claimed.'
+  else
+    [ "$(field registered)" = true ] || { echo 'Service registration was not completed' >&2; exit 1; }
+  fi
+  ;;
+ *) exit 1 ;;
+esac

@@ -1,0 +1,220 @@
+# GP browser negotiation and ABI3 browser certificate boundary.
+# Copyright (C) 2026 OpenConnect GUI contributors; GPL-3.0-only.
+# Mapping attribution: yuezk/GlobalProtect-openconnect (GPL-3.0),
+# commit 9e4f45997ebee452c58d7d3066dcfc175d65ef82.
+--- a/auth-globalprotect.c
++++ b/auth-globalprotect.c
+@@ -82,6 +82,7 @@
+ 	struct oc_form_opt *opt, *opt2;
+ 	char *prompt = NULL, *username_label = NULL, *password_label = NULL;
+ 	char *s = NULL, *saml_method = NULL, *saml_path = NULL;
++	int browser_advertised = 0;
+ 	int result = -EINVAL;
+ 
+ 	if (!xmlnode_is_named(xml_node, "prelogin-response"))
+@@ -90,6 +91,16 @@
+ 	for (xml_node = xml_node->children; xml_node; xml_node = xml_node->next) {
+ 		xmlnode_get_val(xml_node, "saml-request", &s);
+ 		xmlnode_get_val(xml_node, "saml-auth-method", &saml_method);
++		if (xmlnode_is_named(xml_node, "saml-default-browser")) {
++			char *advertisement = NULL;
++			xmlnode_get_trimmed_val(xml_node, "saml-default-browser", &advertisement);
++			/* Absent, malformed and duplicate advertisements remain unknown. */
++			vpninfo->ocgui_gp_external_allowed = !browser_advertised && advertisement ?
++				(!strcmp(advertisement, "yes") ? 1 :
++				 !strcmp(advertisement, "no") ? 0 : -1) : -1;
++			browser_advertised = 1;
++			free(advertisement);
++		}
+ 		xmlnode_get_trimmed_val(xml_node, "authentication-message", &prompt);
+ 		xmlnode_get_trimmed_val(xml_node, "username-label", &username_label);
+ 		xmlnode_get_trimmed_val(xml_node, "password-label", &password_label);
+@@ -665,6 +676,26 @@
+ 	return result;
+ }
+ 
++/* Browser negotiation values/placement adapted from the GPL-3.0 project
++ * yuezk/GlobalProtect-openconnect, commit
++ * 9e4f45997ebee452c58d7d3066dcfc175d65ef82, crates/gpapi/src/params/
++ * {portal_prelogin,gateway_prelogin}.rs and os_profile/mod.rs.
++ * No OS identities, compliance data or separate HTTP implementation copied.
++ */
++static void ocgui_gp_enter_phase(struct openconnect_info *vpninfo, int portal)
++{
++	int phase = portal ? 1 : 2;
++	if (vpninfo->ocgui_gp_phase == phase)
++		return;
++	vpninfo->ocgui_gp_phase = phase;
++	vpninfo->ocgui_gp_external_allowed = -1;
++	vpninfo->ocgui_gp_requested_mode = 0;
++	vpninfo->ocgui_gp_retry_used = 0;
++	vpninfo->ocgui_gp_auth_rejected = 0;
++	vpninfo->ocgui_gp_retry_requested = 0;
++	vpninfo->ocgui_gp_retry_eligible = 0;
++}
++
+ /* Main login entry point
+  *
+  * portal: 0 for gateway login, 1 for portal login
+@@ -679,7 +710,23 @@
+ 
+ 	/* Ask the user to fill in the auth form; repeat as necessary */
+ 	for (;;) {
+-		int keep_urlpath = 0;
++		int keep_urlpath = 0, browser_value = 0;
++		char *browser_path = NULL;
++		const char *os = gpst_os_name(vpninfo);
++		ocgui_gp_enter_phase(vpninfo, portal);
++		vpninfo->ocgui_gp_external_allowed = -1;
++		vpninfo->ocgui_gp_retry_eligible = 0;
++		vpninfo->ocgui_gp_requested_mode = vpninfo->ocgui_gp_browser_mode &&
++			!vpninfo->ocgui_gp_retry_used;
++		if (vpninfo->ocgui_gp_browser_configured) {
++			if (strcmp(os, "Linux") && strcmp(os, "Mac") && strcmp(os, "Windows")) {
++				/* No documented desktop mapping: retain upstream mobile prelogin. */
++				vpninfo->ocgui_gp_requested_mode = 0;
++			}
++			browser_value = vpninfo->ocgui_gp_requested_mode ?
++				(!strcmp(os, "Linux") ? 4 : !strcmp(os, "Mac") ? 3 : 2) :
++				(portal ? -10 : 0);
++		}
+ 		if (vpninfo->urlpath) {
+ 			/* XX: If the path ends with .esp (possibly followed by a query string), leave as-is */
+ 			const char *esp = strstr(vpninfo->urlpath, ".esp");
+@@ -698,7 +745,29 @@
+ 		buf_truncate(request_body);
+ 		if (!vpninfo->no_external_auth)
+ 			buf_append(request_body, "cas-support=yes");
++		if (vpninfo->ocgui_gp_browser_configured && (!strcmp(os, "Linux") || !strcmp(os, "Mac") || !strcmp(os, "Windows"))) {
++			if (!strcmp(os, "Windows")) {
++				char *new_path;
++				if (asprintf(&new_path, "%s%cdefault-browser=%d", vpninfo->urlpath,
++					     strchr(vpninfo->urlpath, '?') ? '&' : '?', browser_value) < 0) {
++					if (!keep_urlpath) {
++						free(vpninfo->urlpath);
++						vpninfo->urlpath = orig_path;
++					}
++					result = -ENOMEM;
++					goto out;
++				}
++				browser_path = vpninfo->urlpath;
++				vpninfo->urlpath = new_path;
++			} else
++				buf_append(request_body, "%sdefault-browser=%d",
++					   request_body->pos ? "&" : "", browser_value);
++		}
+ 		result = do_https_request(vpninfo, "POST", "application/x-www-form-urlencoded", request_body, &xml_buf, NULL, HTTP_REDIRECT);
++		if (browser_path) {
++			free(vpninfo->urlpath);
++			vpninfo->urlpath = browser_path;
++		}
+ 		if (!keep_urlpath) {
+ 			free(vpninfo->urlpath);
+ 			vpninfo->urlpath = orig_path;
+@@ -709,9 +778,24 @@
+ 		if (result)
+ 			goto out;
+ 
++		vpninfo->ocgui_gp_retry_eligible = !vpninfo->ocgui_gp_auth_rejected;
+ 	got_form:
+ 		/* process auth form */
+ 		result = process_auth_form(vpninfo, ctx->form);
++		vpninfo->ocgui_gp_retry_eligible = 0;
++		if (result == -EAGAIN && vpninfo->ocgui_gp_retry_requested) {
++			vpninfo->ocgui_gp_retry_requested = 0;
++			vpninfo->ocgui_gp_retry_used = 1;
++			free_auth_form(ctx->form);
++			ctx->form = NULL;
++			free_pass(&vpninfo->sso_login);
++			free(vpninfo->sso_browser_mode);
++			vpninfo->sso_browser_mode = NULL;
++			free_pass(&vpninfo->sso_username);
++			free_pass(&vpninfo->sso_cookie_value);
++			continue;
++		}
++		vpninfo->ocgui_gp_retry_requested = 0;
+ 		if (result)
+ 			goto out;
+ 
+@@ -767,6 +851,7 @@
+ 			result = gpst_xml_or_error(vpninfo, xml_buf, portal ? parse_portal_xml : parse_login_xml,
+ 									   challenge_cb, ctx);
+ 		if (result == -EACCES) {
++			vpninfo->ocgui_gp_auth_rejected = 1;
+ 			/* Invalid username/password; reuse same form, but blank,
+ 			 * unless we just did a blind retry.
+ 			 */
+@@ -788,6 +873,7 @@
+ 				 *   OR (b) portal form was neither challenge auth nor alt-secret (SAML)
+ 				 */
+ 				portal = 0;
++				ocgui_gp_enter_phase(vpninfo, portal);
+ 				if (ctx->portal_userauthcookie || ctx->portal_prelogonuserauthcookie ||
+ 				    (strcmp(ctx->form->auth_id, "_challenge") && !ctx->alt_secret)) {
+ 					blind_retry = 1;
+@@ -809,6 +895,8 @@
+ 	struct login_context ctx = { .username=NULL, .alt_secret=NULL, .portal_userauthcookie=NULL, .portal_prelogonuserauthcookie=NULL, .form=NULL };
+ 	int result;
+ 
++	/* A new authentication invocation starts a fresh phase budget. */
++	vpninfo->ocgui_gp_phase = 0;
+ 	/* An alternate password/secret field may be specified in the "URL path" (or --usergroup).
+ 	 * Known possibilities are:
+ 	 *     /portal:portal-userauthcookie
+@@ -841,6 +929,9 @@
+ 	free(ctx.portal_prelogonuserauthcookie);
+ 	free(ctx.region);
+ 	free_auth_form(ctx.form);
++	vpninfo->ocgui_gp_phase = 0;
++	vpninfo->ocgui_gp_retry_requested = 0;
++	vpninfo->ocgui_gp_retry_eligible = 0;
+ 	return result;
+ }
+ 
+--- a/openconnect-internal.h
++++ b/openconnect-internal.h
+@@ -813,6 +813,16 @@
+ 	/* OpenConnect GUI ABI2: owner-thread-only, borrowed callback context. */
+ 	int (*ocgui_peer_policy)(void *context, const char *reason);
+ 	void *ocgui_peer_policy_context;
++	/* OpenConnect GUI ABI3; private, native owner-thread state only. */
++	int ocgui_gp_browser_configured;
++	int ocgui_gp_browser_mode; /* preferred mode, retained across phases */
++	int ocgui_gp_requested_mode;
++	int ocgui_gp_phase; /* 0 outside login, 1 portal, 2 gateway */
++	int ocgui_gp_external_allowed; /* -1 unknown, 0 no, 1 yes */
++	int ocgui_gp_retry_used;
++	int ocgui_gp_retry_requested;
++	int ocgui_gp_retry_eligible;
++	int ocgui_gp_auth_rejected;
+ 	openconnect_write_new_config_vfn write_new_config;
+ 	openconnect_open_webview_vfn open_webview;
+ 	openconnect_open_webview_vfn open_ext_browser;
+--- a/library.c
++++ b/library.c
+@@ -1857,6 +1857,11 @@
+ 	if (ret == OC_FORM_RESULT_CANCELLED || ret < 0)
+ 		nuke_opt_values(form->opts);
+ 
++	/* A GP negotiation retry must not launch the now-obsolete SSO request.
++	 * Keep all other protocol/form result semantics unchanged. */
++	if (ret == -EAGAIN && vpninfo->ocgui_gp_retry_requested)
++		return ret;
++
+ 	if (do_sso) {
+ 		free(vpninfo->sso_cookie_value);
+ 		free(vpninfo->sso_username);
+--- a/libopenconnect.map.in
++++ b/libopenconnect.map.in
+@@ -16,6 +16,11 @@
+ 	ocgui_set_script_env;
+ 	ocgui_tun_is_up;
+ 	ocgui_transport_is_udp;
++	ocgui_set_gp_browser_mode;
++	ocgui_gp_external_allowed;
++	ocgui_gp_auth_phase;
++	ocgui_gp_retry_embedded;
++	ocgui_verify_browser_chain;
+ 	openconnect_check_peer_cert_hash;
+ 	openconnect_clear_cookie;
+ 	openconnect_free_cert_info;

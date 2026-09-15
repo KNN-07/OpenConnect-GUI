@@ -1,0 +1,18 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-only
+set -eu
+app='/Applications/OpenConnect GUI.app'
+[ "$(/usr/bin/id -u)" = 0 ] || { echo 'Run this fixed installed uninstaller using administrator authorization' >&2; exit 1; }
+[ ! -L "$app" ] || exit 1
+"$app/Contents/Resources/package-lifecycle" remove
+# The lifecycle ACK proves quiescence, recovery and unregister. No deletion
+# occurs before that barrier. Per-user profile/keyring storage is never removed.
+if [ -L /usr/local/bin/ocvpn ]; then
+  [ "$(/usr/bin/readlink /usr/local/bin/ocvpn)" = "$app/Contents/MacOS/ocvpn" ] || { echo 'Unrelated CLI link preserved; removal aborted' >&2; exit 1; }
+  /bin/rm /usr/local/bin/ocvpn
+elif [ -e /usr/local/bin/ocvpn ]; then
+  echo 'Unrelated CLI path preserved; removal aborted' >&2
+  exit 1
+fi
+/bin/rm -rf "$app"
+/usr/sbin/pkgutil --forget org.openconnectgui.package

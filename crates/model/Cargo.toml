@@ -1,0 +1,17 @@
+[package]
+name = "ocvpn-model"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+serde = { workspace = true, features = ["rc"] }
+serde_json.workspace = true
+uuid.workspace = true
+url.workspace = true
+zeroize.workspace = true
+secrecy.workspace = true
+thiserror.workspace = true
+ts-rs.workspace = true
+tokio.workspace = true
+base64 = "0.22.1"

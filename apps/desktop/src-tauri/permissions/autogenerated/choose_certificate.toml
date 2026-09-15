@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-choose-certificate"
+description = "Enables the choose_certificate command without any pre-configured scope."
+commands.allow = ["choose_certificate"]
+
+[[permission]]
+identifier = "deny-choose-certificate"
+description = "Denies the choose_certificate command without any pre-configured scope."
+commands.deny = ["choose_certificate"]

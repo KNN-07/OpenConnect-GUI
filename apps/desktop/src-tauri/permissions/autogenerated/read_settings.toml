@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-read-settings"
+description = "Enables the read_settings command without any pre-configured scope."
+commands.allow = ["read_settings"]
+
+[[permission]]
+identifier = "deny-read-settings"
+description = "Denies the read_settings command without any pre-configured scope."
+commands.deny = ["read_settings"]

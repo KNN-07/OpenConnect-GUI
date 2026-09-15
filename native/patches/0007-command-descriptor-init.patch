@@ -1,0 +1,14 @@
+Initialize the optional command writer before any constructor failure or free.
+A context without a command pipe must never close the caller's descriptor zero.
+Local change to OpenConnect's LGPL-2.1-only implementation.
+
+--- a/library.c
++++ b/library.c
+@@ -196,6 +196,7 @@
+ 	vpninfo->dtls_fd = -1;
+ 	vpninfo->need_poll_cmd_fd = -1;
+ 	vpninfo->cmd_fd = -1;
++	vpninfo->cmd_fd_write = -1;
+ 	init_pkt_queue(&vpninfo->free_queue);
+ 	init_pkt_queue(&vpninfo->incoming_queue);
+ 	init_pkt_queue(&vpninfo->outgoing_queue);

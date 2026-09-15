@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-new-profile"
+description = "Enables the new_profile command without any pre-configured scope."
+commands.allow = ["new_profile"]
+
+[[permission]]
+identifier = "deny-new-profile"
+description = "Denies the new_profile command without any pre-configured scope."
+commands.deny = ["new_profile"]

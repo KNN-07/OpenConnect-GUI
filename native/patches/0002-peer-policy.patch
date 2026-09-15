@@ -1,0 +1,54 @@
+--- a/openconnect-internal.h
++++ b/openconnect-internal.h
+@@ -810,6 +810,9 @@
+ 	int verbose;
+ 	void *cbdata;
+ 	openconnect_validate_peer_cert_vfn validate_peer_cert;
++	/* OpenConnect GUI ABI2: owner-thread-only, borrowed callback context. */
++	int (*ocgui_peer_policy)(void *context, const char *reason);
++	void *ocgui_peer_policy_context;
+ 	openconnect_write_new_config_vfn write_new_config;
+ 	openconnect_open_webview_vfn open_webview;
+ 	openconnect_open_webview_vfn open_ext_browser;
+--- a/gnutls.c
++++ b/gnutls.c
+@@ -2155,7 +2155,11 @@
+ 		}
+ 		gnutls_free(prev_der);
+ 		vpn_progress(vpninfo, PRG_TRACE, _("Server presented identical cert on rehandshake\n"));
+-		return 0;
++		if (!vpninfo->ocgui_peer_policy)
++			return 0;
++		/* Recheck the current host even for an identical certificate. */
++		cert = vpninfo->peer_cert;
++		goto verify_certificate;
+ 	}
+ 
+ 	err = gnutls_x509_crt_init(&cert);
+@@ -2178,6 +2182,7 @@
+ 			     _("Could not calculate hash of server's certificate\n"));
+ 	}
+ 
++ verify_certificate:
+ 	err = gnutls_certificate_verify_peers2(session, &status);
+ 	if (err) {
+ 		vpn_progress(vpninfo, PRG_ERR, _("Error checking server cert status\n"));
+@@ -2211,6 +2216,18 @@
+ 	} else if (!crt_check_hostname_or_ip(cert, vpninfo->hostname))
+ 		reason = _("certificate does not match hostname");
+  done:
++	/* Application policy must see trusted redirect peers too. Preserve native
++	 * failure reasons and expose the chain only during this synchronous call.
++	 * With no policy installed, retain upstream failure-only semantics. */
++	if (vpninfo->ocgui_peer_policy) {
++		vpninfo->cert_list_handle = (void *)cert_list;
++		vpninfo->cert_list_size = cert_list_size;
++		err = vpninfo->ocgui_peer_policy(vpninfo->ocgui_peer_policy_context,
++					       reason) ? GNUTLS_E_CERTIFICATE_ERROR : 0;
++		vpninfo->cert_list_handle = NULL;
++		vpninfo->cert_list_size = 0;
++		return err;
++	}
+ 	if (reason) {
+ 		vpn_progress(vpninfo, PRG_INFO,
+ 			     _("Server certificate verify failed: %s\n"),

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-browser-reply"
+description = "Enables the browser_reply command without any pre-configured scope."
+commands.allow = ["browser_reply"]
+
+[[permission]]
+identifier = "deny-browser-reply"
+description = "Denies the browser_reply command without any pre-configured scope."
+commands.deny = ["browser_reply"]

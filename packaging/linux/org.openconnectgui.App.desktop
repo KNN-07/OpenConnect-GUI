@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=OpenConnect GUI
+Comment=Open-source multi-protocol VPN client
+Exec=/usr/bin/ocvpn-gui
+TryExec=/usr/bin/ocvpn-gui
+Icon=openconnect-gui
+Terminal=false
+Categories=Network;Security;
+StartupWMClass=OpenConnect GUI

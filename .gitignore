@@ -1,0 +1,10 @@
+/target/
+/apps/desktop/node_modules/
+/apps/desktop/dist/
+/apps/desktop/*.tsbuildinfo
+/native/vendor/openconnect-9.21/
+__pycache__/
+.DS_Store
+.env
+.env.*
+!.env.example

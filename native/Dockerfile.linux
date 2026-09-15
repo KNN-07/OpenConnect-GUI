@@ -1,0 +1,17 @@
+# SPDX-License-Identifier: GPL-3.0-only
+# Native Linux development image, not a release provenance lock.
+FROM ubuntu:22.04@sha256:829f6df217bcbae2b371026e81711d1a787c61b2967ad09d015063663ebafbf7
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 ca-certificates gnupg build-essential autoconf automake libtool \
+    gettext autopoint pkg-config patch patchelf binutils \
+    libgnutls28-dev nettle-dev libgmp-dev libxml2-dev zlib1g-dev \
+    libp11-kit-dev libstoken-dev libpskc-dev libpcsclite-dev \
+    && rm -rf /var/lib/apt/lists/*
+COPY prepare-linux-prefix.py /opt/prepare-linux-prefix.py
+RUN python3 /opt/prepare-linux-prefix.py /opt/ocvpn-deps \
+    && useradd --uid 1000 --create-home builder
+USER 1000:1000
+ENV HOME=/home/builder
+WORKDIR /workspace
+CMD ["python3", "native/build.py", "--target", "host", "--dependency-prefix", "/opt/ocvpn-deps"]

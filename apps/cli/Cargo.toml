@@ -1,0 +1,29 @@
+[package]
+name = "ocvpn-cli"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+default-run = "ocvpn"
+
+[[bin]]
+name = "ocvpn"
+path = "src/main.rs"
+
+[[bin]]
+name = "ocvpn-auth-callback"
+path = "src/callback.rs"
+
+[dependencies]
+clap = { workspace = true, features = ["derive"] }
+ocvpn-client.workspace = true
+ocvpn-model.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+uuid.workspace = true
+zeroize.workspace = true
+clap_complete = "4"
+crossterm = "0.28"
+ratatui = "0.29"
+unicode-width = "0.2"

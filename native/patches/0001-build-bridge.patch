@@ -1,0 +1,35 @@
+--- a/Makefile.am
++++ b/Makefile.am
+@@ -130,7 +130,7 @@
+ endif
+ 
+ 
+-libopenconnect_la_SOURCES = version.c $(library_srcs)
++libopenconnect_la_SOURCES = version.c $(library_srcs) ocgui.c ocgui.h
+ libopenconnect_la_CFLAGS = $(AM_CFLAGS) $(SSL_CFLAGS) $(DTLS_SSL_CFLAGS) \
+ 	$(LIBXML2_CFLAGS) $(JSON_CFLAGS) $(LIBPROXY_CFLAGS) $(ZLIB_CFLAGS) \
+ 	$(P11KIT_CFLAGS) $(TSS_CFLAGS) $(LIBSTOKEN_CFLAGS) $(LIBPSKC_CFLAGS) \
+--- a/libopenconnect.map.in
++++ b/libopenconnect.map.in
+@@ -1,5 +1,21 @@
+ OPENCONNECT_5.0 {
+  global:
++	ocgui_bridge_abi;
++	ocgui_api_version_major;
++	ocgui_api_version_minor;
++	ocgui_has_hpke;
++	ocgui_progress_bridge;
++	ocgui_configure_tun;
++	ocgui_getaddrinfo_numeric;
++	ocgui_getaddrinfo_system;
++	ocgui_freeaddrinfo;
++	ocgui_set_peer_policy;
++	ocgui_duplicate_cmd_handle;
++	ocgui_send_cmd;
++	ocgui_close_cmd_handle;
++	ocgui_set_script_env;
++	ocgui_tun_is_up;
++	ocgui_transport_is_udp;
+ 	openconnect_check_peer_cert_hash;
+ 	openconnect_clear_cookie;
+ 	openconnect_free_cert_info;

@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=OpenConnect GUI Authentication Callback
+NoDisplay=true
+Terminal=false
+Exec=/usr/bin/ocvpn-auth-callback %u
+MimeType=x-scheme-handler/globalprotectcallback;

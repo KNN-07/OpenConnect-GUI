@@ -1,0 +1,15 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-only
+set -eu
+# Relocated/alternate-volume installations break protected loader paths.
+[ "${3:-/}" = / ] || { echo 'OpenConnect GUI must be installed on the startup volume' >&2; exit 1; }
+major=$(/usr/bin/sw_vers -productVersion)
+major=${major%%.*}
+[ "$major" -ge 13 ] || { echo 'macOS 13 or newer is required' >&2; exit 1; }
+if [ -e /usr/local/bin/ocvpn ] || [ -L /usr/local/bin/ocvpn ]; then
+  [ -L /usr/local/bin/ocvpn ] && [ "$(/usr/bin/readlink /usr/local/bin/ocvpn)" = '/Applications/OpenConnect GUI.app/Contents/MacOS/ocvpn' ] || {
+    echo 'An unrelated /usr/local/bin/ocvpn exists; preserve it and choose how to migrate before installation' >&2
+    exit 1
+  }
+fi
+exec "$(dirname "$0")/lifecycle" prepare

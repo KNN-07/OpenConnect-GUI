@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-auth-reply"
+description = "Enables the auth_reply command without any pre-configured scope."
+commands.allow = ["auth_reply"]
+
+[[permission]]
+identifier = "deny-auth-reply"
+description = "Denies the auth_reply command without any pre-configured scope."
+commands.deny = ["auth_reply"]
