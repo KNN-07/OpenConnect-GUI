@@ -79,7 +79,8 @@ def main():
         return subprocess.check_output(['cygpath', '-u', str(path)], text=True).strip() if windows else str(path)
     pfx = native_path(prefix)
     environment = dict(os.environ)
-    environment.update({'PKG_CONFIG_PATH': pfx + '/lib/pkgconfig', 'PKG_CONFIG_LIBDIR': pfx + '/lib/pkgconfig', 'CPPFLAGS': '-I' + pfx + '/include', 'LDFLAGS': '-L' + pfx + '/lib', 'CFLAGS': '-O2', 'CXXFLAGS': '-O2'})
+    pkg_prefix = prefix.as_posix() if windows else pfx
+    environment.update({'PKG_CONFIG_PATH': pkg_prefix + '/lib/pkgconfig', 'PKG_CONFIG_LIBDIR': pkg_prefix + '/lib/pkgconfig', 'CPPFLAGS': '-I' + pfx + '/include', 'LDFLAGS': '-L' + pfx + '/lib', 'CFLAGS': '-O2', 'CXXFLAGS': '-O2'})
     environment['PATH'] = str(prefix / 'bin') + os.pathsep + environment.get('PATH', '')
     if windows:
         environment.update({'CC': 'x86_64-w64-mingw32-gcc', 'CXX': 'x86_64-w64-mingw32-g++', 'AR': 'x86_64-w64-mingw32-ar', 'RANLIB': 'x86_64-w64-mingw32-ranlib'})
@@ -107,9 +108,15 @@ def main():
         source = directories[0]
         name = package['name']
         if name == 'p11-kit':
-            run(['meson', 'setup', 'output', '--prefix', pfx, '--libdir', 'lib', '--default-library', 'shared', '-Dtrust_module=disabled', '-Dlibffi=enabled', '-Dsystemd=disabled', '-Dgtk_doc=false', '-Dman=false', '-Dnls=false', '-Dtest=false'], cwd=source, env=environment)
-            run(['meson', 'compile', '-C', 'output'], cwd=source, env=environment)
-            run(['meson', 'install', '-C', 'output'], cwd=source, env=environment)
+            meson_environment = environment.copy()
+            if windows:
+                # Meson/Ninja are native Windows processes, not MSYS shells.
+                meson_environment['CPPFLAGS'] = '-I' + pkg_prefix + '/include'
+                meson_environment['CFLAGS'] += ' -I' + pkg_prefix + '/include'
+                meson_environment['LDFLAGS'] = '-L' + pkg_prefix + '/lib -static-libgcc -static-libstdc++'
+            run(['meson', 'setup', 'output', '--prefix', pkg_prefix, '--libdir', 'lib', '--default-library', 'shared', '-Dtrust_module=disabled', '-Dlibffi=enabled', '-Dsystemd=disabled', '-Dgtk_doc=false', '-Dman=false', '-Dnls=false', '-Dtest=false'], cwd=source, env=meson_environment)
+            run(['meson', 'compile', '-C', 'output'], cwd=source, env=meson_environment)
+            run(['meson', 'install', '-C', 'output'], cwd=source, env=meson_environment)
         elif name == 'zlib' and windows:
             variables = ['PREFIX=x86_64-w64-mingw32-', 'prefix=' + pfx, 'LDFLAGS=-static-libgcc', 'SHARED_MODE=1', 'BINARY_PATH=' + pfx + '/bin', 'LIBRARY_PATH=' + pfx + '/lib', 'INCLUDE_PATH=' + pfx + '/include']
             run(['make', '-f', 'win32/Makefile.gcc', '-j2', *variables], cwd=source, env=environment)
@@ -124,6 +131,11 @@ def main():
             run(configure, cwd=source, env=environment)
             run(['make', '-j2'], cwd=source, env=environment)
             run(['make', 'install'], cwd=source, env=environment)
+        if windows:
+            # Native pkg-config cannot resolve MSYS drive paths when launched
+            # directly by Python or Meson. Both toolchains accept D:/... paths.
+            for pc in (prefix / 'lib/pkgconfig').glob('*.pc'):
+                pc.write_text(pc.read_text().replace(pfx, pkg_prefix))
         licenses = prefix / 'share/licenses' / name
         licenses.mkdir(parents=True)
         if name == 'zlib':
@@ -136,7 +148,7 @@ def main():
     # Make pkg-config paths relocatable for content-addressed prefix archives.
     for path in (prefix / 'lib/pkgconfig').glob('*.pc'):
         value = path.read_text()
-        value = value.replace(pfx, '${pcfiledir}/../..')
+        value = value.replace(pkg_prefix, '${pcfiledir}/../..')
         path.write_text(value)
     (prefix / 'dependency-prefix.json').write_text(json.dumps({'schema_version': 1, 'target': target, 'source_lock_sha256': digest(LOCK), 'recipe_sha256': digest(Path(__file__)), 'files': {p.relative_to(prefix).as_posix(): digest(p) for p in sorted(prefix.rglob('*')) if p.is_file()}}, indent=2) + '\n')
     print(f'Pinned prefix: {prefix.relative_to(ROOT)}; set OCVPN_DEPENDENCY_SOURCES={sources.relative_to(ROOT)} for packaging')

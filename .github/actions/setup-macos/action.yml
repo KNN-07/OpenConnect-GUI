@@ -1,0 +1,48 @@
+name: Set up native macOS build tools
+description: Provision hosted Intel or Apple Silicon tools without substituting Homebrew libraries for pinned native sources.
+runs:
+  using: composite
+  steps:
+    - name: Install native build tools
+      shell: bash
+      env:
+        HOMEBREW_NO_AUTO_UPDATE: "1"
+        HOMEBREW_NO_INSTALL_CLEANUP: "1"
+      run: |
+        set -euo pipefail
+        case "$(uname -m)" in
+          arm64) brew=/opt/homebrew/bin/brew ;;
+          x86_64) brew=/usr/local/bin/brew ;;
+          *) echo 'Unsupported native macOS architecture' >&2; exit 1 ;;
+        esac
+        # Only build/signature tools come from Brew. xtask builds the pinned
+        # dependency prefix; never expose Brew include/lib/pkgconfig directories.
+        "$brew" install autoconf automake libtool gettext pkgconf meson ninja \
+          m4 help2man texinfo gnupg make cmake python@3.13
+        {
+          echo "$("$brew" --prefix)/bin"
+          for formula in autoconf automake libtool gettext pkgconf meson ninja m4 help2man texinfo gnupg cmake; do
+            echo "$("$brew" --prefix "$formula")/bin"
+          done
+          echo "$("$brew" --prefix make)/libexec/gnubin"
+          echo "$("$brew" --prefix python@3.13)/libexec/bin"
+          echo "$HOME/.cargo/bin"
+        } >> "$GITHUB_PATH"
+        # Preserve Apple's libtool for compiler/archive consumers. Autoreconf
+        # needs GNU libtoolize, which Homebrew deliberately names glibtoolize.
+        {
+          echo "LIBTOOLIZE=$("$brew" --prefix libtool)/bin/glibtoolize"
+          echo "ACLOCAL_PATH=$("$brew" --prefix gettext)/share/aclocal:$("$brew" --prefix libtool)/share/aclocal"
+          echo "SDKROOT=$(xcrun --sdk macosx --show-sdk-path)"
+          echo "CC=$(xcrun --sdk macosx --find clang)"
+          echo "CXX=$(xcrun --sdk macosx --find clang++)"
+          echo "AR=$(xcrun --sdk macosx --find ar)"
+          echo "RANLIB=$(xcrun --sdk macosx --find ranlib)"
+          echo 'MACOSX_DEPLOYMENT_TARGET=13.0'
+        } >> "$GITHUB_ENV"
+    - name: Install repository Rust toolchain
+      shell: bash
+      run: |
+        set -euo pipefail
+        toolchain=$(python3 -c 'import pathlib, tomllib; print(tomllib.loads(pathlib.Path("rust-toolchain.toml").read_text())["toolchain"]["channel"])')
+        rustup toolchain install "$toolchain" --profile minimal --component rustfmt --component clippy

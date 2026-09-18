@@ -228,6 +228,7 @@ def main(resources):
     environment['PATH'] = str(prefix / 'bin') + os.pathsep + environment['PATH']
     if system == 'windows':
         environment['CC'] = 'x86_64-w64-mingw32-gcc'
+        environment['LDFLAGS'] = environment.get('LDFLAGS', '') + ' -static-libgcc -static-libstdc++'
     else:
         # The command bridge masks SIGPIPE per calling thread, not process-wide.
         environment['CFLAGS'] = environment.get('CFLAGS', '-O2 -g') + ' -pthread'
@@ -245,10 +246,15 @@ def main(resources):
     shutil.copy2(NATIVE / 'bridge/ocgui.c', source / 'ocgui.c')
     shutil.copy2(NATIVE / 'bridge/ocgui.h', source / 'ocgui.h')
     for patch in ['0001-build-bridge.patch', '0002-peer-policy.patch', '0003-hotp-commit.patch', '0004-array-stdout.patch', '0005-gp-browser.patch', '0006-gp-sso-fields.patch', '0007-command-descriptor-init.patch', '0008-windows-native-helper.patch', '0009-owned-script-group.patch']:
-        run(['patch', '-p1', '--batch', '--forward', '-i', NATIVE / 'patches' / patch], cwd=source)
-    run(['autoreconf', '-fi'], cwd=source, env=environment)
+        patch_path = NATIVE / 'patches' / patch
+        run(['patch', '-p1', '--batch', '--forward', '-i', patch_path.as_posix() if system == 'windows' else patch_path], cwd=source)
+    # autoreconf is a Perl script; native Windows CreateProcess cannot execute
+    # an extensionless shebang script. Let MSYS sh perform script dispatch.
+    autoreconf = ['sh', '-c', 'exec autoreconf "$@"', 'autoreconf', '-fi'] if system == 'windows' else ['autoreconf', '-fi']
+    run(autoreconf, cwd=source, env=environment)
     stage = output / 'stage'
-    configure = ['sh', source / 'configure', '--prefix=/ocvpn-native', '--enable-shared',
+    configure_path = (source / 'configure').as_posix() if system == 'windows' else source / 'configure'
+    configure = ['sh', configure_path, '--prefix=/ocvpn-native', '--enable-shared',
                  '--disable-static', '--with-gnutls', '--without-openssl',
                  '--without-libproxy', '--with-builtin-json', '--without-lz4',
                  '--without-gnutls-tss2', '--disable-nls', '--disable-flask-tests',
@@ -272,8 +278,9 @@ def main(resources):
     if not version_match or version_match[1] != expected_runtime_version:
         raise RuntimeError('Generated native version does not match the pinned archive build identity')
     runtime_version = version_match[1]
+    stage_path = subprocess.check_output(['cygpath', '-u', str(stage)], text=True).strip() if system == 'windows' else str(stage)
     run(['make', 'install-libLTLIBRARIES', 'install-includeHEADERS',
-         'DESTDIR=' + str(stage)], cwd=source, env=environment)
+         'DESTDIR=' + stage_path], cwd=source, env=environment)
     installed = stage / 'ocvpn-native'
     runtime = installed / 'lib'
     runtime.mkdir(parents=True, exist_ok=True)

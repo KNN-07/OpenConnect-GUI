@@ -279,16 +279,90 @@ flow instead of overwriting another application's protocol association.
 
 ## Release workflow and acceptance boundaries
 
-`.github/workflows/release.yml` builds Linux inside the baseline container and
-macOS Intel/ARM plus Windows x86_64 on matching `ocvpn-release` native self-hosted
-runners. Self-hosted runners must expose the native toolchains above; the release
-job never installs moving Brew/MSYS library packages as substitute inputs.
-Optional publisher identities are supplied through the `native-release`
-environment. Native reference-install jobs require clean, disposable Ubuntu
-22.04, Fedora 42, macOS 13 Intel/ARM and Windows 10 22H2 runners with the documented
-labels, native elevation and (macOS) an actual approval-capable login session.
-No preinstalled OpenConnect is permitted. Tag publication waits for all package
-install/idle-uninstall jobs, and uploads all source/checksum/license artifacts.
+`.github/workflows/ci.yml` runs on pull requests, every branch push, manual
+dispatch, and calls from the release workflow. Its GitHub-hosted Ubuntu 22.04
+job checks workflow syntax with checksum-pinned actionlint, Rust formatting,
+Python syntax, canonical model export, the locked frontend production build,
+locked full-workspace tests, Clippy, and native loopback protocol fixtures.
+It does not run privileged tunnel labs or claim interactive browser acceptance.
+The final `checks` job fails if its prerequisite fails, is cancelled, or is
+skipped. Select that CI check in branch protection after its first successful
+run. PR CI receives no release secrets and never uses self-hosted runners.
+
+`.github/workflows/release.yml` first checks that the Cargo workspace, desktop
+package, package-lock root/top-level versions, and Tauri version agree. Tag
+pushes must match that version exactly (`v0.1.0` for the current manifests).
+It then requires the reusable CI workflow before building Linux inside the
+baseline container and macOS Intel/ARM plus Windows x86_64 on GitHub-hosted
+native runners. The local composite actions install build tools; native library
+dependencies still come from the pinned source recipes, not moving Brew/MSYS
+library packages.
+
+### GitHub setup and publishing
+
+Commit and push the workflow/helper changes before invoking them. Actions must
+be enabled with permission to use the SHA-pinned actions in the workflows.
+PR/branch CI needs no repository secrets. Publication uses the automatic
+`GITHUB_TOKEN`; only the publish job receives `contents: write`, not a PAT.
+
+Create the `native-release` environment with deployment rules permitting the
+trusted `main` branch and `v*` tags. Native build/installation jobs and publication
+use that environment. Restrict who can update `main` and create release tags,
+and add required environment reviewers if appropriate for your publishing policy.
+
+No self-hosted runner registration is required:
+
+| Purpose | GitHub-hosted runner |
+|---|---|
+| Linux baseline build / Ubuntu installation | `ubuntu-22.04` |
+| Fedora 42 installation | Isolated systemd container on `ubuntu-24.04` |
+| macOS Intel build / installation | `macos-15-intel` |
+| macOS ARM build / installation | `macos-15` |
+| Windows MSVC build / installation | `windows-2022` |
+
+Installation runs use disposable hosted machines. Fedora's privileged container
+has its own cgroup/network namespaces and no host bind mounts. No preinstalled
+OpenConnect is permitted. macOS still requires actual service approval; hosted
+execution does not bypass that consent or turn approval-required into a pass.
+These hosted OS versions do not prove acceptance on macOS 13 or Windows 10.
+
+Optional environment secrets are `OCVPN_APP_SIGN_IDENTITY`,
+`OCVPN_INSTALLER_SIGN_IDENTITY`, `OCVPN_NOTARY_PROFILE`, and
+`OCVPN_WINDOWS_CERT_THUMBPRINT`. They reference identities/profiles already
+provisioned on the native build runners; setting a name does not install a
+certificate. The OS approval/signing limitations above still apply.
+
+After the workflows are on `main`, a manual full build/installation rehearsal
+uploads Actions artifacts but never publishes a GitHub Release:
+
+```sh
+gh workflow run release.yml --ref main
+```
+
+To publish, update all version manifests/locks and the changelog together, merge
+the reviewed changes, then tag that exact commit:
+
+```sh
+git tag -a v0.1.0 -m "OpenConnect GUI 0.1.0"
+git push origin v0.1.0
+```
+
+Only a matching version-tag **push** publishes, after CI, every native package
+build, and every reference installation/idle-uninstall job succeeds. A manual
+dispatch on a tag is still a rehearsal. A version containing a SemVer prerelease
+suffix is published as a prerelease and must match all manifests too.
+
+`.github/scripts/release.py` requires all four target artifact directories,
+unique asset names, and complete valid per-target SHA-256 manifests. It preserves
+the original filenames, including Windows installer spaces. Publication creates
+or resumes a **draft**, uploads the packages/source/checksums/license inventories,
+downloads them to verify their bytes, and only then publishes. Failed uploads
+leave a draft; rerun the failed job to resume it. Unexpected existing draft
+assets require explicit operator review. Published releases are never
+overwritten by a rerun. Runs for the same ref are serialized without cancelling
+an in-flight release.
+
+### Installation checks
 
 The executable installation check is:
 

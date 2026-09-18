@@ -1,0 +1,63 @@
+name: Set up Windows native packaging
+description: Prepare MSVC Rust, native Python and the MSYS2 C build tools on windows-2022
+runs:
+  using: composite
+  steps:
+    - name: Install MSYS2 build tools
+      id: msys2
+      uses: msys2/setup-msys2@66cd2cce69caa17b53920067426061ca1de3a884 # v2.32.0
+      with:
+        msystem: UCRT64
+        path-type: inherit
+        update: true
+        install: >-
+          autoconf automake libtool make gettext-devel m4 perl help2man texinfo
+          patch diffutils gawk sed grep bison flex gperf gnupg
+          mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-binutils
+          mingw-w64-ucrt-x86_64-pkgconf
+    - name: Prepare native Windows tools and shell environment
+      shell: pwsh
+      env:
+        MSYS2_ROOT: ${{ steps.msys2.outputs.msys2-location }}
+      run: |
+        $ErrorActionPreference = 'Stop'
+        # Keep pathlib, subprocess and DLL loading native, not MSYS/Cygwin Python.
+        $python = (Get-Command python.exe).Source
+        $venv = Join-Path $env:RUNNER_TEMP 'ocvpn-python'
+        & $python -m venv $venv
+        if ($LASTEXITCODE) { throw 'Cannot create native Python environment' }
+        $scripts = Join-Path $venv 'Scripts'
+        Copy-Item "$scripts\python.exe" "$scripts\python3.exe"
+        & "$scripts\python.exe" -m pip install --disable-pip-version-check meson ninja
+        if ($LASTEXITCODE) { throw 'Cannot install native Meson and Ninja' }
+
+        $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+        $vs = & $vswhere -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+        if (-not $vs) { throw 'The hosted runner has no x64 MSVC build tools' }
+        & "$vs\Common7\Tools\Launch-VsDevShell.ps1" -Arch amd64 -HostArch amd64 -SkipAutomaticLocation
+        foreach ($name in @('INCLUDE', 'LIB', 'LIBPATH', 'WindowsSdkDir', 'WindowsSDKVersion', 'VCToolsInstallDir', 'VSINSTALLDIR')) {
+          $value = [Environment]::GetEnvironmentVariable($name)
+          if ($value) { "$name=$value" | Out-File $env:GITHUB_ENV -Append -Encoding utf8 }
+        }
+        $linker = Join-Path $env:VCToolsInstallDir 'bin\Hostx64\x64\link.exe'
+        if (-not (Test-Path $linker)) { throw 'MSVC x64 linker is absent' }
+        "CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_LINKER=$linker" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
+
+        $llvm = Join-Path $env:ProgramFiles 'LLVM\bin'
+        $nsis = Join-Path ${env:ProgramFiles(x86)} 'NSIS'
+        foreach ($file in @("$llvm\libclang.dll", "$nsis\makensis.exe")) {
+          if (-not (Test-Path $file)) { throw "Required hosted-runner tool is absent: $file" }
+        }
+        "LIBCLANG_PATH=$llvm" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
+        'MSYSTEM=UCRT64' | Out-File $env:GITHUB_ENV -Append -Encoding utf8
+        'MSYS2_PATH_TYPE=inherit' | Out-File $env:GITHUB_ENV -Append -Encoding utf8
+        'CHERE_INVOKING=1' | Out-File $env:GITHUB_ENV -Append -Encoding utf8
+        # GITHUB_PATH entries are prepended in reverse order. MSYS bash/sh must
+        # win over Git Bash, but native Python and MinGW pkg-config win over /usr.
+        foreach ($directory in @($llvm, $nsis, "$env:MSYS2_ROOT\usr\bin", "$env:MSYS2_ROOT\ucrt64\bin", $scripts, "$env:USERPROFILE\.cargo\bin")) {
+          $directory | Out-File $env:GITHUB_PATH -Append -Encoding utf8
+        }
+        rustup set default-host x86_64-pc-windows-msvc
+        if ($LASTEXITCODE) { throw 'Cannot select the MSVC Rust host' }
+        rustup toolchain install 1.98.0-x86_64-pc-windows-msvc --profile minimal --component rustfmt --component clippy
+        if ($LASTEXITCODE) { throw 'Cannot install the pinned MSVC Rust toolchain' }

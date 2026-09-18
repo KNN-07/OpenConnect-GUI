@@ -5,8 +5,27 @@ on:
     tags: ['v*']
 permissions:
   contents: read
+concurrency:
+  group: native-release-${{ github.ref }}
+  cancel-in-progress: false
 jobs:
+  preflight:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Validate matching manifest versions and release tag
+        env:
+          RELEASE_REF: ${{ github.ref }}
+        run: python3 .github/scripts/release.py preflight
+  checks:
+    needs: preflight
+    uses: ./.github/workflows/ci.yml
   linux-build:
+    needs: [preflight, checks]
+    timeout-minutes: 180
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
@@ -22,20 +41,23 @@ jobs:
           path: target/packages/x86_64-unknown-linux-gnu/*
           if-no-files-found: error
   native-build:
+    needs: [preflight, checks]
+    timeout-minutes: 180
     strategy:
       fail-fast: false
       matrix:
         include:
           - target: x86_64-apple-darwin
-            labels: '["self-hosted","macOS","X64","ocvpn-release"]'
+            runner: macos-15-intel
           - target: aarch64-apple-darwin
-            labels: '["self-hosted","macOS","ARM64","ocvpn-release"]'
+            runner: macos-15
           - target: x86_64-pc-windows-msvc
-            labels: '["self-hosted","Windows","X64","ocvpn-release"]'
-    runs-on: ${{ fromJSON(matrix.labels) }}
+            runner: windows-2022
+    runs-on: ${{ matrix.runner }}
     environment: native-release
     env:
       MACOSX_DEPLOYMENT_TARGET: '13.0'
+      PACKAGE_TARGET: ${{ matrix.target }}
       OCVPN_APP_SIGN_IDENTITY: ${{ secrets.OCVPN_APP_SIGN_IDENTITY }}
       OCVPN_INSTALLER_SIGN_IDENTITY: ${{ secrets.OCVPN_INSTALLER_SIGN_IDENTITY }}
       OCVPN_NOTARY_PROFILE: ${{ secrets.OCVPN_NOTARY_PROFILE }}
@@ -50,11 +72,15 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: '22.19.0'
+      - uses: ./.github/actions/setup-macos
+        if: runner.os == 'macOS'
+      - uses: ./.github/actions/setup-windows
+        if: runner.os == 'Windows'
       - name: Pinned tools and native source build
         run: |
           npm install --global npm@11.19.0
           rustup show active-toolchain
-          cargo xtask package --target '${{ matrix.target }}'
+          cargo xtask package --target "$PACKAGE_TARGET"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: packages-${{ matrix.target }}
@@ -62,17 +88,20 @@ jobs:
           if-no-files-found: error
   linux-reference-install:
     needs: linux-build
+    timeout-minutes: 45
+    environment: native-release
     strategy:
       fail-fast: false
       matrix:
         include:
-          - labels: '["self-hosted","Linux","X64","ocvpn-disposable-ubuntu22"]'
+          - runner: ubuntu-22.04
             extension: deb
-          - labels: '["self-hosted","Linux","X64","ocvpn-disposable-fedora42"]'
+          - runner: ubuntu-24.04
             extension: rpm
-    runs-on: ${{ fromJSON(matrix.labels) }}
+    runs-on: ${{ matrix.runner }}
     env:
       OCVPN_DISPOSABLE_RUNNER: '1'
+      PACKAGE_EXTENSION: ${{ matrix.extension }}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
@@ -81,26 +110,35 @@ jobs:
         with:
           name: packages-x86_64-unknown-linux-gnu
           path: artifacts
-      - name: Install real package and exercise installed service
-        run: python3 packaging/smoke.py artifacts/openconnect-gui*${{ matrix.extension }}
+      - name: Install Debian package and exercise installed service
+        if: matrix.extension == 'deb'
+        run: |
+          sudo apt-get update
+          python3 packaging/smoke.py artifacts/openconnect-gui*"$PACKAGE_EXTENSION"
+      - name: Install RPM in an isolated Fedora systemd container
+        if: matrix.extension == 'rpm'
+        run: python3 .github/scripts/fedora-smoke.py
   native-reference-install:
     needs: native-build
+    timeout-minutes: 45
+    environment: native-release
     strategy:
       fail-fast: false
       matrix:
         include:
           - target: x86_64-apple-darwin
-            labels: '["self-hosted","macOS","X64","ocvpn-disposable-macos13"]'
+            runner: macos-15-intel
             package: 'openconnect-gui*.pkg'
           - target: aarch64-apple-darwin
-            labels: '["self-hosted","macOS","ARM64","ocvpn-disposable-macos13"]'
+            runner: macos-15
             package: 'openconnect-gui*.pkg'
           - target: x86_64-pc-windows-msvc
-            labels: '["self-hosted","Windows","X64","ocvpn-disposable-windows10"]'
+            runner: windows-2022
             package: '*-setup.exe'
-    runs-on: ${{ fromJSON(matrix.labels) }}
+    runs-on: ${{ matrix.runner }}
     env:
       OCVPN_DISPOSABLE_RUNNER: '1'
+      PACKAGE_PATTERN: ${{ matrix.package }}
     defaults:
       run:
         shell: bash
@@ -113,29 +151,40 @@ jobs:
           name: packages-${{ matrix.target }}
           path: artifacts
       - name: Install with actual native authorization and approval
-        run: python3 packaging/smoke.py --select-gui artifacts '${{ matrix.package }}'
-  publish:
-    if: startsWith(github.ref, 'refs/tags/v')
-    needs: [linux-reference-install, native-reference-install]
-    runs-on: ubuntu-22.04
-    permissions:
-      contents: write
+        run: python3 packaging/smoke.py --select-gui artifacts "$PACKAGE_PATTERN"
+  verify-artifacts:
+    needs: [checks, linux-reference-install, native-reference-install]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
     steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
           pattern: packages-*
           path: release
-      - name: Publish all architectures, source archives, checksums and licenses
+      - name: Verify all packaged checksums and unique asset names
+        run: python3 .github/scripts/release.py verify release
+  publish:
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    needs: [checks, verify-artifacts]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    environment: native-release
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          pattern: packages-*
+          path: release
+      - name: Upload verified assets to a draft, verify downloads, then publish
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          TAG: ${{ github.ref_name }}
-        run: |
-          gh release create "$TAG" --verify-tag --title "OpenConnect GUI $TAG" --notes 'Native build and idle installation checks passed. See packaged verification documentation for unverified interactive, tunnel and vendor acceptance. No license server or feature activation is required.'
-          for directory in release/packages-*; do
-            target="${directory##*/packages-}"
-            for file in "$directory"/*; do
-              name="${file##*/}"
-              gh release upload "$TAG" "$file#$target-$name"
-            done
-          done
+          RELEASE_REF: ${{ github.ref }}
+        run: python3 .github/scripts/release.py publish release
