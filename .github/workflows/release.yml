@@ -81,6 +81,16 @@ jobs:
           npm install --global npm@11.19.0
           rustup show active-toolchain
           cargo xtask package --target "$PACKAGE_TARGET"
+      - name: Preserve native configure diagnostics on failure
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: native-diagnostics-${{ matrix.target }}
+          path: |
+            target/dependencies/**/config.log
+            target/dependencies/**/meson-log.txt
+            target/native/**/config.log
+          if-no-files-found: ignore
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: packages-${{ matrix.target }}

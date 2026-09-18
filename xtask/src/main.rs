@@ -63,11 +63,12 @@ fn run() -> Result<(), String> {
         print!("{HELP}");
         return Ok(());
     };
-    let root = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .ok_or("xtask manifest has no repository parent")?
-        .canonicalize()
-        .map_err(|error| format!("cannot locate repository root: {error}"))?;
+    let root = dunce::canonicalize(
+        Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .ok_or("xtask manifest has no repository parent")?,
+    )
+    .map_err(|error| format!("cannot locate repository root: {error}"))?;
     if !root.join("Cargo.toml").is_file() || !root.join("native/build.py").is_file() {
         return Err(format!(
             "repository build inputs are missing under {}",
@@ -143,7 +144,7 @@ fn run() -> Result<(), String> {
         native.env("CFLAGS", "-O2");
     }
     if let Some(path) = dependency_prefix {
-        let prefix = path.canonicalize().map_err(|error| {
+        let prefix = dunce::canonicalize(&path).map_err(|error| {
             format!("cannot open dependency prefix {}: {error}; provide an existing native dependency directory", path.display())
         })?;
         if !prefix.is_dir() {
