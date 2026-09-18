@@ -73,8 +73,10 @@ fn status(service: &SMAppService) -> Result<SMAppServiceStatus> {
     match status {
         SMAppServiceStatus::NotRegistered
         | SMAppServiceStatus::Enabled
-        | SMAppServiceStatus::RequiresApproval => Ok(status),
-        // NotFound means a missing or invalid bundled resource, not success.
+        | SMAppServiceStatus::RequiresApproval
+        // A freshly installed, validated bundle has no Background Task
+        // Management record yet. macOS reports NotFound until registration.
+        | SMAppServiceStatus::NotFound => Ok(status),
         _ => Err(unavailable()),
     }
 }
@@ -109,7 +111,7 @@ fn registration_error() -> Error {
 }
 
 fn unregister(service: &SMAppService) -> Result<()> {
-    if status(service)? == SMAppServiceStatus::NotRegistered {
+    if !registered(status(service)?) {
         return Ok(());
     }
     let (send, receive) = mpsc::sync_channel(1);
@@ -125,7 +127,7 @@ fn unregister(service: &SMAppService) -> Result<()> {
     ))? {
         return Err(registration_error());
     }
-    if status(service)? != SMAppServiceStatus::NotRegistered {
+    if registered(status(service)?) {
         return Err(unavailable());
     }
     Ok(())

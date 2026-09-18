@@ -264,7 +264,7 @@ def main(resources):
     source = output / 'source/openconnect-9.21'
     shutil.copy2(NATIVE / 'bridge/ocgui.c', source / 'ocgui.c')
     shutil.copy2(NATIVE / 'bridge/ocgui.h', source / 'ocgui.h')
-    for patch in ['0001-build-bridge.patch', '0002-peer-policy.patch', '0003-hotp-commit.patch', '0004-array-stdout.patch', '0005-gp-browser.patch', '0006-gp-sso-fields.patch', '0007-command-descriptor-init.patch', '0008-windows-native-helper.patch', '0009-owned-script-group.patch']:
+    for patch in ['0001-build-bridge.patch', '0002-peer-policy.patch', '0003-hotp-commit.patch', '0004-array-stdout.patch', '0005-gp-browser.patch', '0006-gp-sso-fields.patch', '0007-command-descriptor-init.patch', '0008-windows-native-helper.patch', '0009-owned-script-group.patch', '0010-public-windows-crt-headers.patch']:
         patch_path = NATIVE / 'patches' / patch
         run(['patch', '-p1', '--batch', '--forward', '-i', patch_path.as_posix() if system == 'windows' else patch_path], cwd=source)
     # autoreconf is a Perl script; native Windows CreateProcess cannot execute

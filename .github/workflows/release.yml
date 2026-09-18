@@ -184,6 +184,9 @@ jobs:
           path: artifacts
       - name: Install with actual native authorization and approval
         run: python3 packaging/smoke.py --select-gui artifacts "$PACKAGE_PATTERN"
+      - name: Diagnose macOS service registration failures
+        if: failure() && runner.os == 'macOS'
+        run: sudo /usr/bin/log show --last 15m --style compact --predicate '(process == "package_script_service" OR process == "backgroundtaskmanagementd" OR subsystem CONTAINS[c] "ServiceManagement")'
   verify-artifacts:
     needs: [checks, linux-build, native-build, linux-reference-install, native-reference-install]
     runs-on: ubuntu-24.04

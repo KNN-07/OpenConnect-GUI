@@ -1,0 +1,10 @@
+--- a/compat.c
++++ b/compat.c
+@@ -27,7 +27,6 @@
+ #include <inttypes.h>
+ 
+ #ifdef _WIN32
+-#include <sec_api/stdlib_s.h> /* errno_t, size_t */
+ #ifndef HAVE_GETENV_S_DECL
+ errno_t getenv_s(
+ 	size_t     *ret_required_buf_size,
