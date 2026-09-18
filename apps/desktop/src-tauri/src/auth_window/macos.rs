@@ -298,7 +298,7 @@ define_class!(
                     ));
                     return;
                 }
-                if space.authenticationMethod().as_ref() != NSURLAuthenticationMethodServerTrust {
+                if &*space.authenticationMethod() != NSURLAuthenticationMethodServerTrust {
                     handler.call((
                         NSURLSessionAuthChallengeDisposition::PerformDefaultHandling,
                         ptr::null_mut(),

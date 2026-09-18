@@ -472,7 +472,7 @@ fn install(view: &Rc<RefCell<View>>) -> NativeResult<()> {
                 v.headers.clear();
                 v.pending.clear();
                 v.loaded = false;
-                Ok(())
+                Ok::<_, windows::core::Error>(())
             })();
             if result.is_err() {
                 let _ = args.SetCancel(true);
