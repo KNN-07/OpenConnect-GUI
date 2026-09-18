@@ -361,7 +361,8 @@ def windows_package(payload, output, work, target, headless):
     if not packages:
         raise RuntimeError('Tauri did not produce an NSIS installer')
     for path in packages:
-        copy(path, output / path.name)
+        # GitHub rewrites spaces in asset names; normalize before checksumming.
+        copy(path, output / path.name.replace(' ', '-'))
 
 
 def distribution_native(stage, destination, licenses, target):

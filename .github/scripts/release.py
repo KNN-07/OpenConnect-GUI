@@ -78,7 +78,8 @@ def verify(directory):
             raise ValueError(f'Not a regular artifact directory: {artifact}')
         files = {}
         for path in sorted(artifact.iterdir()):
-            if path.is_symlink() or not path.is_file() or not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9 ._+-]*', path.name):
+            if (path.is_symlink() or not path.is_file() or path.name.endswith('.')
+                    or not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._+-]*', path.name)):
                 raise ValueError(f'Unsafe or unexpected artifact entry: {path}')
             if path.name in assets:
                 raise ValueError(f'Duplicate release asset name across artifacts: {path.name}')
@@ -88,7 +89,7 @@ def verify(directory):
         checksum_file = files.pop(checksum_name)
         checksums = {}
         for line in checksum_file.read_text().splitlines():
-            match = re.fullmatch(r'([0-9a-f]{64})  ([A-Za-z0-9][A-Za-z0-9 ._+-]*)', line)
+            match = re.fullmatch(r'([0-9a-f]{64})  ([A-Za-z0-9][A-Za-z0-9._+-]*)', line)
             if not match or match[2] in checksums:
                 raise ValueError(f'Invalid or duplicate checksum entry in {checksum_file}')
             checksums[match[2]] = match[1]
@@ -144,13 +145,13 @@ def publish(directory):
         if not release['draft']:
             raise ValueError('Refusing to overwrite a published release')
     else:
-        gh('release', 'create', tag, '--repo', repository, '--verify-tag', '--draft',
-           '--title', f'OpenConnect GUI {tag}', '--notes', NOTES,
-           *(['--prerelease'] if prerelease else []))
-        matches = [release for release in pages(endpoint + '?per_page=100') if release['tag_name'] == tag]
-        if len(matches) != 1:
-            raise ValueError('Created draft could not be uniquely identified')
-        release = matches[0]
+        # Preserve --verify-tag semantics without relying on a second,
+        # potentially stale collection listing to identify the new draft.
+        api(f'repos/{repository}/git/ref/tags/{tag}')
+        release = api(endpoint, 'POST', {
+            'tag_name': tag, 'name': f'OpenConnect GUI {tag}', 'body': NOTES,
+            'draft': True, 'prerelease': prerelease,
+        })
     endpoint += f'/{release["id"]}'
     require_draft(endpoint, tag)
     remote = pages(endpoint + '/assets?per_page=100')

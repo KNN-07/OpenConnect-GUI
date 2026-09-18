@@ -10,6 +10,7 @@
 - Made macOS release acceptance explicit: verified installation, code signatures, bundled protocols and a healthy pending-approval state; no automatic OS-consent bypass or claim of service startup/uninstall. Linux/Windows retain full idle lifecycle gates.
 - Corrected hosted native build failures and Windows UTF-8 package metadata handling, pinned and bundled Windows pthreads, and moved macOS control/network-monitor endpoints beneath protected `/private/var/db` ancestors.
 - Prepared Windows install roots before Tauri creates them, made silent installer failures abort without modal dialogs, and waited for the NSIS uninstaller's full process tree during native acceptance.
+- Used authoritative draft-creation responses and portable Windows asset names to preserve GitHub publication and checksum invariants.
 - Added real native protocol/browser fixtures and an isolated dual-stack ocserv lab covering packet traffic, DNS, route policy, crash recovery, typed event subscriptions, and quiet Linux keyring behavior.
 - Corrected native integration failures found during execution: Debian lifecycle dispatch, restrictive-umask runtime-directory repair, openresolv 3.12/3.17 absent-record handling, systemd resolver write access, stale dialog errors, duplicated observation delivery, native dialog prerequisites, and TUI state/filter presentation.
 

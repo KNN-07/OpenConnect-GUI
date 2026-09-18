@@ -372,11 +372,13 @@ A manual dispatch on a tag is still a rehearsal. A version containing a SemVer p
 suffix is published as a prerelease and must match all manifests too.
 
 `.github/scripts/release.py` requires all four target artifact directories,
-unique asset names, and complete valid per-target SHA-256 manifests. It preserves
-the original filenames, including Windows installer spaces. Publication creates
-or resumes a **draft**, uploads the packages/source/checksums/license inventories,
-downloads them to verify their bytes, and only then publishes. Failed uploads
-leave a draft; rerun the failed job to resume it. Unexpected existing draft
+unique portable asset names, and complete valid per-target SHA-256 manifests.
+Windows installer filenames use hyphens instead of spaces before checksumming;
+GitHub would otherwise rename them. Publication creates or resumes a **draft**,
+using the creation response's ID rather than requiring an immediate second
+listing. It uploads the packages/source/checksums/license inventories, downloads
+them to verify their bytes, and only then publishes. Failed uploads leave a
+draft; rerun the failed job to resume it. Unexpected existing draft
 assets require explicit operator review. Published releases are never
 overwritten by a rerun. Runs for the same ref are serialized without cancelling
 an in-flight release.
