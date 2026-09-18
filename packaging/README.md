@@ -149,7 +149,9 @@ native service-management path before package removal.
 
 `native/dependency-sources.json` pins archive versions and actual SHA-256 digests
 for GMP, nettle/hogweed, libffi, p11-kit, zlib, GNU libiconv, libxml2, GnuTLS,
-stoken and OATH/libpskc. GNU libiconv avoids macOS's lossy system conversion.
+stoken and OATH/libpskc. Windows additionally builds the pinned MinGW-w64
+winpthreads runtime, including its license and corresponding sources, rather than
+depending on an ambient MSYS2 DLL. GNU libiconv avoids macOS's lossy system conversion.
 `native/build-dependencies.py` is the executable generation recipe:
 
 ```sh

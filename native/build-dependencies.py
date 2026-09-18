@@ -46,7 +46,9 @@ def main():
     sources = work / 'sources'
     sources.mkdir(parents=True, exist_ok=True)
     lock = json.loads(LOCK.read_text())
-    for package in lock['packages']:
+    packages = [package for package in lock['packages']
+                if 'targets' not in package or target in package['targets']]
+    for package in packages:
         filename = package['url'].rsplit('/', 1)[1]
         path = sources / filename
         if not path.exists():
@@ -56,7 +58,7 @@ def main():
             raise RuntimeError(f'Pinned source digest mismatch: {filename}; preserve evidence and replace the corrupt download explicitly')
     shutil.copyfile(LOCK, sources / LOCK.name)
     shutil.copyfile(Path(__file__), sources / 'build.py')
-    manifest = {'schema_version': 1, 'packages': lock['packages'], 'files': {p.name: digest(p) for p in sorted(sources.iterdir()) if p.is_file() and p.name != 'sources.json'}}
+    manifest = {'schema_version': 1, 'packages': packages, 'files': {p.name: digest(p) for p in sorted(sources.iterdir()) if p.is_file() and p.name != 'sources.json'}}
     (sources / 'sources.json').write_text(json.dumps(manifest, indent=2) + '\n')
     if args.fetch_only:
         return
@@ -100,7 +102,7 @@ def main():
         'stoken': ['--without-gtk', '--without-java', '--without-tomcrypt', '--with-nettle'],
         'oath-toolkit': ['--disable-gtk-doc', '--disable-nls', '--disable-pam'],
     }
-    for package in lock['packages']:
+    for package in packages:
         build = work / 'build' / package['name']
         build.mkdir(parents=True, exist_ok=False)
         with tarfile.open(sources / package['url'].rsplit('/', 1)[1]) as archive:
@@ -110,6 +112,8 @@ def main():
             raise RuntimeError('Source archive does not have one root')
         source = directories[0]
         name = package['name']
+        if name == 'winpthreads':
+            source /= 'mingw-w64-libraries/winpthreads'
         if name == 'p11-kit':
             meson_environment = environment.copy()
             if windows:

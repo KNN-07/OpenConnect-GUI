@@ -2,6 +2,7 @@
   "schema_version": 1,
   "scope": "Native macOS and MinGW-w64 source prefix. Linux releases use the separately pinned Ubuntu snapshot and exact Debian corresponding sources.",
   "packages": [
+    {"name":"winpthreads","version":"14.0.0","url":"https://downloads.sourceforge.net/project/mingw-w64/mingw-w64/mingw-w64-release/mingw-w64-v14.0.0.tar.bz2","sha256":"6eaf921d9eb987d3820b364ea9775bc19b965ec81490b6fdd716526c28e1995c","targets":["x86_64-pc-windows-msvc"]},
     {"name":"gmp","version":"6.3.0","url":"https://ftp.gnu.org/gnu/gmp/gmp-6.3.0.tar.xz","sha256":"a3c2b80201b89e68616f4ad30bc66aee4927c3ce50e33929ca819d5c43538898"},
     {"name":"nettle","version":"3.10.2","url":"https://ftp.gnu.org/gnu/nettle/nettle-3.10.2.tar.gz","sha256":"fe9ff51cb1f2abb5e65a6b8c10a92da0ab5ab6eaf26e7fc2b675c45f1fb519b5"},
     {"name":"libffi","version":"3.4.8","url":"https://github.com/libffi/libffi/releases/download/v3.4.8/libffi-3.4.8.tar.gz","sha256":"bc9842a18898bfacb0ed1252c4febcc7e78fa139fd27fdc7a3e30d9d9356119b"},
