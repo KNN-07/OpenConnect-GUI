@@ -257,8 +257,12 @@ def mac_payload(payload, release, native, licenses, headless):
     (payload / 'usr/local/bin/ocvpn').symlink_to('/Applications/OpenConnect GUI.app/Contents/MacOS/ocvpn')
     identity = os.environ.get('OCVPN_APP_SIGN_IDENTITY') or '-'
     # Sign inside-out, not --deep (which masks incorrectly nested components).
+    # Signing a bundle's main executable also signs its containing bundle.
+    # Leave both entry points to the explicit bundle passes after every helper.
+    entry_points = {contents / 'MacOS' / ('ocvpn' if headless else 'ocvpn-gui'),
+                    callback / 'MacOS/ocvpn-auth-callback'}
     for path in sorted(contents.rglob('*'), key=lambda p: len(p.parts), reverse=True):
-        if path.is_file() and (path.parent.name == 'MacOS' or path.suffix == '.dylib' or '.dylib.' in path.name):
+        if path not in entry_points and path.is_file() and (path.parent.name == 'MacOS' or path.suffix == '.dylib' or '.dylib.' in path.name):
             run(['codesign', '--force', '--options', 'runtime', '--timestamp=none' if identity == '-' else '--timestamp', '--sign', identity, path])
     native_root = contents / 'Resources/native'
     manifest_path = native_root / 'native-manifest.json'

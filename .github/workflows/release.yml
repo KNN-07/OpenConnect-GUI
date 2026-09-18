@@ -149,6 +149,9 @@ jobs:
         run: python3 .github/scripts/fedora-smoke.py
   native-reference-install:
     needs: native-build
+    # Check successful targets even if another matrix build failed. Publication
+    # still requires every build, installer check and artifact verification.
+    if: ${{ !cancelled() }}
     timeout-minutes: 45
     environment: native-release
     strategy:
@@ -182,7 +185,7 @@ jobs:
       - name: Install with actual native authorization and approval
         run: python3 packaging/smoke.py --select-gui artifacts "$PACKAGE_PATTERN"
   verify-artifacts:
-    needs: [checks, linux-reference-install, native-reference-install]
+    needs: [checks, linux-build, native-build, linux-reference-install, native-reference-install]
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:

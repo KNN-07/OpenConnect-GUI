@@ -237,6 +237,13 @@ def main(resources):
     if system == 'windows':
         environment['CC'] = 'x86_64-w64-mingw32-gcc'
         environment['LDFLAGS'] = environment.get('LDFLAGS', '') + ' -static-libgcc -static-libstdc++'
+        # MSYS aclocal does not search the native pkg-config tool's UCRT prefix.
+        pkgconf = shutil.which('pkg-config', path=environment['PATH'])
+        if pkgconf is None:
+            raise RuntimeError('Native MinGW-w64 pkg-config is required')
+        macros = Path(pkgconf).resolve().parent.parent / 'share/aclocal'
+        aclocal = run(['cygpath', '-u', macros]).strip()
+        environment['ACLOCAL_PATH'] = ':'.join(filter(None, [aclocal, environment.get('ACLOCAL_PATH')]))
     else:
         # The command bridge masks SIGPIPE per calling thread, not process-wide.
         environment['CFLAGS'] = environment.get('CFLAGS', '-O2 -g') + ' -pthread'
