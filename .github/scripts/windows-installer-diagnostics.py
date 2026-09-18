@@ -7,11 +7,15 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+import tempfile
 
 if sys.platform != 'win32' or os.environ.get('OCVPN_DISPOSABLE_RUNNER') != '1':
     raise SystemExit('Disposable Windows runner required')
 
-command = [sys.executable, '-u', 'packaging/smoke.py', '--select-gui', 'artifacts', '*-setup.exe']
+packages = sorted(Path('artifacts').glob('openconnect-cli-*-setup.exe' if sys.argv[1] == 'cli' else 'OpenConnect GUI*-setup.exe'))
+if len(packages) != 1:
+    raise SystemExit('Expected exactly one installer for the selected flavor')
+command = [sys.executable, '-u', 'packaging/smoke.py', str(packages[0])]
 print('Starting actual native installation smoke:', command, flush=True)
 process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 try:
@@ -22,7 +26,7 @@ except subprocess.TimeoutExpired:
     print('Native installation has not completed after 180 seconds; inspecting its own process tree and dialogs.', flush=True)
 
 ps = subprocess.run([
-    'powershell.exe', '-NoProfile', '-NonInteractive', '-Command',
+    'pwsh.exe', '-NoProfile', '-NonInteractive', '-Command',
     '[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false); '
     'Get-CimInstance Win32_Process | Select-Object ProcessId,ParentProcessId,Name,CommandLine | ConvertTo-Json -Compress'
 ], check=True, stdout=subprocess.PIPE, timeout=30)
@@ -72,11 +76,17 @@ root = Path(os.environ['ProgramW6432']) / 'OpenConnect GUI'
 for path in [root, root / 'ocvpn-installer.exe', Path(os.environ['ProgramData']) / 'OpenConnectGUI']:
     if path.exists():
         result = subprocess.run([
-            'powershell.exe', '-NoProfile', '-NonInteractive', '-Command',
+            'pwsh.exe', '-NoProfile', '-NonInteractive', '-Command',
             '$acl = Get-Acl -LiteralPath $env:OCVPN_DIAGNOSTIC_PATH; $acl | Format-List Path,Owner,Sddl'
         ], env={**os.environ, 'OCVPN_DIAGNOSTIC_PATH': str(path)},
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=30)
         print(result.stdout.decode('utf-8', errors='backslashreplace'), flush=True)
+for guard in Path(tempfile.gettempdir()).glob('*/ocvpn-package-guard.exe'):
+    try:
+        result = subprocess.run([str(guard), 'prepare'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=30)
+        print('Original embedded guard result:', result.returncode, result.stdout.decode('utf-8', errors='backslashreplace'), flush=True)
+    except subprocess.TimeoutExpired:
+        print('Original embedded guard also timed out.', flush=True)
 helper = root / 'ocvpn-installer.exe'
 if helper.is_file():
     try:

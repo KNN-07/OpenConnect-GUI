@@ -6,6 +6,10 @@ permissions:
   actions: read
 jobs:
   diagnose:
+    strategy:
+      fail-fast: false
+      matrix:
+        flavor: [gui, cli]
     runs-on: windows-2022
     environment: native-release
     timeout-minutes: 10
@@ -23,4 +27,4 @@ jobs:
           github-token: ${{ github.token }}
       - name: Diagnose the actual installer and its own native dialogs
         shell: pwsh
-        run: python -u .github/scripts/windows-installer-diagnostics.py
+        run: python -u .github/scripts/windows-installer-diagnostics.py ${{ matrix.flavor }}
