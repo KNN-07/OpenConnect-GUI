@@ -122,6 +122,15 @@ jobs:
         if: runner.os == 'macOS'
       - uses: ./.github/actions/setup-windows
         if: runner.os == 'Windows'
+      - name: Authenticate pinned native source bytes
+        run: |
+          python3 - <<'PY'
+          import json
+          import runpy
+          native = runpy.run_path("native/build.py")
+          spec = json.loads((native["NATIVE"] / "sources.json").read_text())
+          native["authenticate"](spec["openconnect"])
+          PY
       - name: Prepare frontend assets
         run: |
           npm install --global npm@11.19.0
