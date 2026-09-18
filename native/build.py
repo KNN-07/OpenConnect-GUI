@@ -238,6 +238,10 @@ def main(resources):
         # The command bridge masks SIGPIPE per calling thread, not process-wide.
         environment['CFLAGS'] = environment.get('CFLAGS', '-O2 -g') + ' -pthread'
         environment['LDFLAGS'] = environment.get('LDFLAGS', '') + ' -pthread'
+    if system == 'macos':
+        # The package supports macOS 13; the SDK's strchrnul needs macOS 15.4.
+        # Keep OpenConnect's portable implementation on the deployment baseline.
+        environment['ac_cv_func_strchrnul'] = 'no'
     packages = dict(deps['pkg_config'])
     if system == 'linux':
         packages.update(deps['linux_pkg_config'])
@@ -264,6 +268,9 @@ def main(resources):
                  '--without-libproxy', '--with-builtin-json', '--without-lz4',
                  '--without-gnutls-tss2', '--disable-nls', '--disable-flask-tests',
                  '--with-vpnc-script=/ocvpn-native/libexec/ocvpn-net']
+    if system in {'macos', 'windows'}:
+        iconv_prefix = run(['cygpath', '-u', prefix], env=environment).strip() if system == 'windows' else str(prefix)
+        configure.append('--with-libiconv-prefix=' + iconv_prefix)
     if system == 'windows':
         configure.extend(['--host=x86_64-w64-mingw32', '--disable-nsis-installer'])
     run(configure, cwd=source, env=environment)

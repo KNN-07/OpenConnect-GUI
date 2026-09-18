@@ -92,6 +92,7 @@ def main():
         'gmp': ['--disable-cxx'],
         'nettle': ['--disable-documentation'],
         'libffi': ['--disable-docs'],
+        'libiconv': ['--disable-nls'],
         'libxml2': ['--without-python', '--without-icu', '--without-lzma', '--without-iconv', '--with-zlib', '--disable-maintainer-mode'],
         'gnutls': ['--with-included-unistring', '--with-included-libtasn1', '--without-idn', '--without-tpm', '--without-tpm2', '--without-brotli', '--without-zstd', '--with-zlib=link', '--with-p11-kit', '--disable-libdane', '--disable-cxx', '--disable-tools', '--disable-doc', '--disable-tests', '--disable-nls'],
         'stoken': ['--without-gtk', '--without-java', '--without-tomcrypt', '--with-nettle'],

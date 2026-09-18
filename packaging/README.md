@@ -148,8 +148,9 @@ native service-management path before package removal.
 ## macOS and Windows pinned native source builds
 
 `native/dependency-sources.json` pins archive versions and actual SHA-256 digests
-for GMP, nettle/hogweed, libffi, p11-kit, zlib, libxml2, GnuTLS, stoken and
-OATH/libpskc. `native/build-dependencies.py` is the executable generation recipe:
+for GMP, nettle/hogweed, libffi, p11-kit, zlib, GNU libiconv, libxml2, GnuTLS,
+stoken and OATH/libpskc. GNU libiconv avoids macOS's lossy system conversion.
+`native/build-dependencies.py` is the executable generation recipe:
 
 ```sh
 python3 native/build-dependencies.py --target host

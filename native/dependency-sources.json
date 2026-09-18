@@ -7,6 +7,7 @@
     {"name":"libffi","version":"3.4.8","url":"https://github.com/libffi/libffi/releases/download/v3.4.8/libffi-3.4.8.tar.gz","sha256":"bc9842a18898bfacb0ed1252c4febcc7e78fa139fd27fdc7a3e30d9d9356119b"},
     {"name":"p11-kit","version":"0.25.5","url":"https://github.com/p11-glue/p11-kit/releases/download/0.25.5/p11-kit-0.25.5.tar.xz","sha256":"04d0a86450cdb1be018f26af6699857171a188ac6d5b8c90786a60854e1198e5"},
     {"name":"zlib","version":"1.3.1","url":"https://zlib.net/fossils/zlib-1.3.1.tar.gz","sha256":"9a93b2b7dfdac77ceba5a558a580e74667dd6fede4585b91eefb60f03b72df23"},
+    {"name":"libiconv","version":"1.19","url":"https://ftp.gnu.org/gnu/libiconv/libiconv-1.19.tar.gz","sha256":"88dd96a8c0464eca144fc791ae60cd31cd8ee78321e67397e25fc095c4a19aa6"},
     {"name":"libxml2","version":"2.14.5","url":"https://download.gnome.org/sources/libxml2/2.14/libxml2-2.14.5.tar.xz","sha256":"03d006f3537616833c16c53addcdc32a0eb20e55443cba4038307e3fa7d8d44b"},
     {"name":"gnutls","version":"3.8.10","url":"https://www.gnupg.org/ftp/gcrypt/gnutls/v3.8/gnutls-3.8.10.tar.xz","sha256":"db7fab7cce791e7727ebbef2334301c821d79a550ec55c9ef096b610b03eb6b7"},
     {"name":"stoken","version":"0.92","url":"https://downloads.sourceforge.net/stoken/stoken-0.92.tar.gz","sha256":"aa2b481b058e4caf068f7e747a2dcf5772bcbf278a4f89bc9efcbf82bcc9ef5a"},
