@@ -29,16 +29,12 @@ jobs:
         run: gh run download 35340227306 --name "packages-$PACKAGE_TARGET" --dir artifacts
       - name: Exercise native package with detailed installer logs
         run: python3 packaging/smoke.py --select-gui artifacts 'openconnect-gui*.pkg'
-      - name: Preserve PackageKit script logs
+      - name: Read current ServiceManagement diagnostics
         if: failure()
-        run: |
-          sudo cp /var/log/install.log "$RUNNER_TEMP/ocvpn-install.log"
-          sudo chmod 0644 "$RUNNER_TEMP/ocvpn-install.log"
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        run: sudo /usr/bin/log show --last 3m --style compact --predicate '(process == "backgroundtaskmanagementd" OR subsystem CONTAINS[c] "ServiceManagement")'
+      - name: Verify installed application code signatures
         if: failure()
-        with:
-          name: installer-log-${{ matrix.target }}
-          path: ${{ runner.temp }}/ocvpn-install.log
+        run: codesign --verify --deep --strict --verbose=4 '/Applications/OpenConnect GUI.app'
       - name: Check installed private engine independently of service registration
         if: failure()
         run: '"/Applications/OpenConnect GUI.app/Contents/MacOS/ocvpn" protocols --json'
