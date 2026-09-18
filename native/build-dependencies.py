@@ -87,7 +87,9 @@ def main():
         environment['LDFLAGS'] += ' -static-libgcc -static-libstdc++'
     else:
         environment['MACOSX_DEPLOYMENT_TARGET'] = '13.0'
-        environment['DYLD_LIBRARY_PATH'] = str(prefix / 'lib')
+        # Do not replace macOS system dylibs inside unrelated build tools with
+        # private dependencies such as GNU libiconv's different-ABI library.
+        environment.pop('DYLD_LIBRARY_PATH', None)
     options = {
         'gmp': ['--disable-cxx'],
         'nettle': ['--disable-documentation'],
