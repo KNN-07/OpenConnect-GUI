@@ -18,13 +18,14 @@ runs:
         # Only build/signature tools come from Brew. xtask builds the pinned
         # dependency prefix; never expose Brew include/lib/pkgconfig directories.
         "$brew" install autoconf automake libtool gettext pkgconf meson ninja \
-          m4 help2man texinfo gnupg make cmake
+          m4 help2man texinfo gnupg make cmake gpatch
         {
           echo "$("$brew" --prefix)/bin"
           for formula in autoconf automake libtool gettext pkgconf meson ninja m4 help2man texinfo gnupg cmake; do
             echo "$("$brew" --prefix "$formula")/bin"
           done
           echo "$("$brew" --prefix make)/libexec/gnubin"
+          echo "$("$brew" --prefix gpatch)/libexec/gnubin"
           echo "$HOME/.cargo/bin"
         } >> "$GITHUB_PATH"
         # Preserve Apple's libtool for compiler/archive consumers. Autoreconf

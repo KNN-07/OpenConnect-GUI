@@ -168,12 +168,13 @@ executed on each native runner.
 
 Prerequisites: compiler, `make`, `pkg-config`, Meson/Ninja, gettext, m4, Perl,
 `help2man`, Texinfo, Python
-3.10+ with `tarfile.data_filter`, and the OpenConnect autotools/GnuPG/patch tools.
+3.10+ with `tarfile.data_filter`, and the OpenConnect autotools/GnuPG/GNU patch tools.
 macOS needs Xcode command-line tools and a login session. Windows needs a native
 MSVC Rust host together with an MSYS2 MinGW-w64 C build environment exposing
-`x86_64-w64-mingw32-{gcc,g++,ar,ranlib,windres}`, `cygpath`, shell tools and a
-native-capable Python; the Rust application is not built with MinGW. Install
-NSIS `makensis` for the independent headless installer. Compiler/tool versions
+`x86_64-w64-mingw32-{gcc,g++}`, native `ar`, `ranlib`, `windres`, `strip`,
+`cygpath`, shell tools and native Windows Python; the Rust application is not
+built with MinGW. Dependency sources use GNU C11 rather than compiler defaults.
+Install NSIS `makensis` for the independent headless installer. Compiler/tool versions
 are build prerequisites, not a claim of bit-identical binaries across SDKs.
 
 Ordinary `native build` still accepts the existing distro/Brew/explicit-prefix

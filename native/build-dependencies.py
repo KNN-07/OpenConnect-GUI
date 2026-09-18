@@ -80,10 +80,10 @@ def main():
     pfx = native_path(prefix)
     environment = dict(os.environ)
     pkg_prefix = prefix.as_posix() if windows else pfx
-    environment.update({'PKG_CONFIG_PATH': pkg_prefix + '/lib/pkgconfig', 'PKG_CONFIG_LIBDIR': pkg_prefix + '/lib/pkgconfig', 'CPPFLAGS': '-I' + pfx + '/include', 'LDFLAGS': '-L' + pfx + '/lib', 'CFLAGS': '-O2', 'CXXFLAGS': '-O2'})
+    environment.update({'PKG_CONFIG_PATH': pkg_prefix + '/lib/pkgconfig', 'PKG_CONFIG_LIBDIR': pkg_prefix + '/lib/pkgconfig', 'CPPFLAGS': '-I' + pfx + '/include', 'LDFLAGS': '-L' + pfx + '/lib', 'CFLAGS': '-O2 -std=gnu11', 'CXXFLAGS': '-O2'})
     environment['PATH'] = str(prefix / 'bin') + os.pathsep + environment.get('PATH', '')
     if windows:
-        environment.update({'CC': 'x86_64-w64-mingw32-gcc', 'CXX': 'x86_64-w64-mingw32-g++', 'AR': 'x86_64-w64-mingw32-ar', 'RANLIB': 'x86_64-w64-mingw32-ranlib'})
+        environment.update({'CC': 'x86_64-w64-mingw32-gcc', 'CXX': 'x86_64-w64-mingw32-g++', 'AR': 'ar', 'RANLIB': 'ranlib'})
         environment['LDFLAGS'] += ' -static-libgcc -static-libstdc++'
     else:
         environment['MACOSX_DEPLOYMENT_TARGET'] = '13.0'
@@ -118,7 +118,7 @@ def main():
             run(['meson', 'compile', '-C', 'output'], cwd=source, env=meson_environment)
             run(['meson', 'install', '-C', 'output'], cwd=source, env=meson_environment)
         elif name == 'zlib' and windows:
-            variables = ['PREFIX=x86_64-w64-mingw32-', 'prefix=' + pfx, 'LDFLAGS=-static-libgcc', 'SHARED_MODE=1', 'BINARY_PATH=' + pfx + '/bin', 'LIBRARY_PATH=' + pfx + '/lib', 'INCLUDE_PATH=' + pfx + '/include']
+            variables = ['PREFIX=x86_64-w64-mingw32-', 'AR=ar', 'RC=windres', 'STRIP=strip', 'prefix=' + pfx, 'LDFLAGS=-static-libgcc', 'SHARED_MODE=1', 'BINARY_PATH=' + pfx + '/bin', 'LIBRARY_PATH=' + pfx + '/lib', 'INCLUDE_PATH=' + pfx + '/include']
             run(['make', '-f', 'win32/Makefile.gcc', '-j2', *variables], cwd=source, env=environment)
             run(['make', '-f', 'win32/Makefile.gcc', 'install', *variables], cwd=source, env=environment)
         else:

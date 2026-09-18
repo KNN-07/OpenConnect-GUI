@@ -76,6 +76,25 @@ jobs:
         if: runner.os == 'macOS'
       - uses: ./.github/actions/setup-windows
         if: runner.os == 'Windows'
+      - name: Restore pinned native dependency sources and prefix
+        id: native-cache
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830
+        with:
+          key: native-${{ matrix.runner }}-${{ matrix.target }}-${{ hashFiles('native/dependency-sources.json', 'native/build-dependencies.py', '.github/actions/setup-macos/action.yml', '.github/actions/setup-windows/action.yml') }}
+          path: |
+            target/dependencies/${{ matrix.target }}/prefix
+            target/dependencies/${{ matrix.target }}/sources
+      - name: Build pinned native dependency prefix
+        if: steps.native-cache.outputs.cache-hit != 'true'
+        run: python3 native/build-dependencies.py --target "$PACKAGE_TARGET"
+      - name: Cache completed native dependencies
+        if: steps.native-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830
+        with:
+          key: ${{ steps.native-cache.outputs.cache-primary-key }}
+          path: |
+            target/dependencies/${{ matrix.target }}/prefix
+            target/dependencies/${{ matrix.target }}/sources
       - name: Pinned tools and native source build
         run: |
           npm install --global npm@11.19.0

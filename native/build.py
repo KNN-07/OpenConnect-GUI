@@ -87,8 +87,13 @@ def owned_build_output(target):
 
 def run(args, cwd=None, env=None):
     print('+', ' '.join(map(str, args)), flush=True)
-    return subprocess.run(list(map(str, args)), cwd=cwd, env=env, check=True,
-                          text=True, stdout=subprocess.PIPE).stdout
+    try:
+        return subprocess.run(list(map(str, args)), cwd=cwd, env=env, check=True,
+                              text=True, stdout=subprocess.PIPE).stdout
+    except subprocess.CalledProcessError as error:
+        if error.stdout:
+            print(error.stdout, file=sys.stderr, end='')
+        raise
 
 
 def digest(path):
