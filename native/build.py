@@ -114,6 +114,9 @@ def authenticate(spec):
                             ('signing_key', 'signing_key_sha256'), ('header', 'header_sha256')]:
         require_digest(NATIVE / spec[field], spec[checksum])
     with tempfile.TemporaryDirectory(prefix='ocvpn-gpg-') as home:
+        if os.name == 'nt':
+            # MSYS GnuPG resolves --homedir as a POSIX path, unlike file inputs.
+            home = run(['cygpath', '-u', home]).strip()
         run(['gpg', '--batch', '--homedir', home, '--import', NATIVE / spec['signing_key']])
         status = run(['gpg', '--batch', '--homedir', home, '--status-fd', '1', '--verify',
                       NATIVE / spec['signature'], NATIVE / spec['archive']])
