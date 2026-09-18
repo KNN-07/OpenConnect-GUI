@@ -17,8 +17,8 @@
   "crypto": {"tls": "GnuTLS", "hkdf_symbol": "gnutls_hkdf_expand", "hpke": true, "nettle_public_key": "hogweed with GMP, not a missing optional dependency"},
   "toolchain": {
     "linux": ["Python >=3.10 with tarfile data_filter backport", "GnuPG", "C compiler", "make", "autoconf", "automake", "libtool", "gettext", "pkg-config", "patch", "patchelf", "readelf"],
-    "macos": ["Python >=3.10 with tarfile data_filter backport", "GnuPG", "Xcode command line tools", "make", "autoconf", "automake", "libtool", "gettext", "pkg-config", "patch", "install_name_tool", "otool"],
-    "windows": ["MSYS2 Python >=3.10 with tarfile data_filter backport", "GnuPG", "MinGW-w64 GCC", "make", "autoconf", "automake", "libtool", "gettext", "pkg-config", "patch", "objdump"]
+    "macos": ["Python >=3.10 with tarfile data_filter backport", "GnuPG", "Xcode command line tools", "make", "autoconf", "automake", "libtool", "gettext", "pkg-config", "GNU patch", "install_name_tool", "otool"],
+    "windows": ["Native Windows Python >=3.10 with tarfile data_filter backport", "GnuPG", "MSYS2 MinGW-w64 GCC and binutils", "make", "autoconf", "automake", "libtool", "gettext", "pkg-config", "GNU patch", "objdump"]
   },
   "windows_driver": {"version": "0.14.1", "url": "https://www.wintun.net/builds/wintun-0.14.1.zip", "sha256": "07c256185d6ee3652e09fa55c0b673e2624b565e02c4b9091c79ca7d2f24ef51", "license": "Archive license must accompany the upstream signed DLL; source GPL-2.0 is not the binary redistribution license."}
 }

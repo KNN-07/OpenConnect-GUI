@@ -120,7 +120,9 @@ def main():
             run(['meson', 'install', '-C', 'output'], cwd=source, env=meson_environment)
         elif name == 'zlib' and windows:
             variables = ['PREFIX=x86_64-w64-mingw32-', 'AR=ar', 'RC=windres', 'STRIP=strip', 'prefix=' + pfx, 'LDFLAGS=-static-libgcc', 'SHARED_MODE=1', 'BINARY_PATH=' + pfx + '/bin', 'LIBRARY_PATH=' + pfx + '/lib', 'INCLUDE_PATH=' + pfx + '/include']
-            run(['make', '-f', 'win32/Makefile.gcc', '-j2', *variables], cwd=source, env=environment)
+            # MinGW binutils can load the zlib1.dll in their working directory;
+            # do not link examples while the DLL is being linked or stripped.
+            run(['make', '-f', 'win32/Makefile.gcc', '-j1', *variables], cwd=source, env=environment)
             run(['make', '-f', 'win32/Makefile.gcc', 'install', *variables], cwd=source, env=environment)
         else:
             configure = ['sh', './configure', '--prefix=' + pfx]

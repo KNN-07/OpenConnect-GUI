@@ -58,7 +58,7 @@ struct PendingTrust {
 impl PendingTrust {
     fn complete(self, accept: bool) {
         unsafe {
-            let trust: *const c_void = msg_send![self.challenge.protectionSpace(), serverTrust];
+            let trust: *const c_void = msg_send![&*self.challenge.protectionSpace(), serverTrust];
             if accept && !trust.is_null() {
                 let credential: Retained<NSURLCredential> =
                     msg_send![NSURLCredential::class(), credentialForTrust: trust];
@@ -326,7 +326,7 @@ define_class!(
                 } else {
                     None
                 };
-                let trust: *const c_void = msg_send![space, serverTrust];
+                let trust: *const c_void = msg_send![&*space, serverTrust];
                 let chain = copy_chain(trust);
                 let (Some(origin), Ok(chain)) = (origin, chain) else {
                     handler.call((

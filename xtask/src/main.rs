@@ -157,7 +157,7 @@ fn run() -> Result<(), String> {
     }
     checked(
         &mut native,
-        "native build (install Python 3.10+ with the tarfile security backport and the target native toolchain; Windows requires MSYS2 Python)",
+        "native build (install Python 3.10+ with the tarfile security backport and the target native toolchain; Windows requires native Windows Python and MSYS2 build tools)",
     )?;
     if matches!(options.task, Task::Build | Task::Package) {
         let desktop = root.join("apps/desktop");
