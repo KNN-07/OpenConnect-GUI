@@ -47,7 +47,7 @@ def main():
             uninstall = ['sudo', 'dnf', 'remove', '-y', 'openconnect-gui']
         cli = Path('/usr/bin/ocvpn')
     elif system == 'Darwin':
-        run(['sudo', '/usr/sbin/installer', '-pkg', package, '-target', '/'])
+        run(['sudo', '/usr/sbin/installer', '-verboseR', '-dumplog', '-pkg', package, '-target', '/'])
         cli = Path('/Applications/OpenConnect GUI.app/Contents/MacOS/ocvpn')
         uninstall = ['sudo', '/Applications/OpenConnect GUI.app/Contents/Resources/uninstall']
     elif system == 'Windows':
