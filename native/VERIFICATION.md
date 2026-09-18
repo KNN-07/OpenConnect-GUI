@@ -32,7 +32,7 @@ The development runner is Linux x86_64. Its development binaries use the host GL
 
 Generated execution evidence was collected under `target/ocvpn-lab/`, `target/browser-verification/`, and `target/release-proof/`. Temporary build/lab data is removed during cleanup; representative actual screenshots are retained in `native/screenshots/`. Re-run the commands below to generate fresh evidence.
 
-The final full-workspace test run was interrupted during disk exhaustion and is **not claimed as passed**. Earlier targeted suites and the native scenarios above completed. Final formatting and frontend-build checks are separate from a completed workspace test run. No final binary release is published on the strength of the interrupted run.
+The earlier local full-workspace run was interrupted by disk exhaustion. Subsequent [GitHub-hosted CI](https://github.com/KNN-07/OpenConnect-GUI/actions/runs/35336709177) completed the locked full-workspace tests, Clippy, frontend build and native protocol fixtures, plus native Windows/MSVC and macOS Intel/ARM Rust compilation. Each release requires a fresh successful CI run.
 
 ## Reproducible entrypoints
 
@@ -59,16 +59,16 @@ For native installation smoke checks on an explicitly disposable matching OS run
 OCVPN_DISPOSABLE_RUNNER=1 python3 packaging/smoke.py PACKAGE
 ```
 
-That command proves installed protocols/doctor/service state and idle uninstall, not GUI behavior or live-tunnel removal. Release publication is gated on the native reference jobs in `.github/workflows/release.yml`.
+Without additional options, that command requires installed protocols/doctor/service state and idle uninstall, not GUI behavior or live-tunnel removal. GitHub-hosted macOS release checks explicitly use `--allow-macos-pending-approval`: installation, code signatures, bundled protocols and a healthy registered/pending-approval state are required, but OS approval, service startup and uninstall remain manual acceptance. Engine, driver and endpoint-trust errors are not accepted as pending approval. Linux/Windows retain full idle lifecycle checks. Publication is gated on these stated boundaries in `.github/workflows/release.yml`.
 
 ## Native platform boundaries
 
 | Platform | Status |
 |---|---|
 | Linux x86_64 | Native development application, local protocol/browser fixtures, isolated ocserv traffic/recovery, and Ubuntu 22.04 baseline package execution exercised as described above. |
-| macOS Intel | Implemented native backend/package route; no macOS host or approval-capable login session was available here. Native installation, utun/DNS recovery, keychain behavior, desktop, and tunnel acceptance remain unverified. |
-| macOS Apple Silicon | Same boundary as Intel; an Intel build would not prove ARM execution. |
-| Windows x86_64 | Native backend/package route implemented. Linux-hosted `x86_64-pc-windows-gnu` checks cover Rust type-checking of networking/client/service code only. No native MSVC package, Windows service/Wintun/NRPT execution, desktop, or tunnel acceptance is claimed here. |
+| macOS Intel | Native Rust compilation, source-built packages, installed bundled CLI/protocol discovery, code-signature verification and registered/pending-approval state exercised on GitHub-hosted macOS 15. Explicit Login Items approval, service startup/uninstall, utun/DNS recovery, keychain, desktop and tunnel acceptance remain manual. |
+| macOS Apple Silicon | The same build, installation and bundled-engine observations were independently exercised on GitHub-hosted ARM macOS 15, not inferred from Intel. The same manual-acceptance boundaries apply. |
+| Windows x86_64 | Native Windows/MSVC Rust compilation and MinGW OpenConnect compilation exercised. Publication additionally requires actual native package installation, installed doctor/service checks and idle uninstall. Wintun/NRPT networking, desktop and tunnel acceptance are not inferred from those idle checks. |
 
 Unsigned application builds retain the same functionality. OS warnings, explicit native approval, administrator authorization, and organizational policy remain real requirements; they are not bypassed to obtain a test pass.
 

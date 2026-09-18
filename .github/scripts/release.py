@@ -25,8 +25,11 @@ SEMVER = re.compile(
     r'(?:\+([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?'
 )
 NOTES = (
-    'Native build and idle installation checks passed. See packaged verification '
-    'documentation for unverified interactive, tunnel and vendor acceptance. '
+    'Native builds and Linux/Windows idle installation checks passed. macOS installation, '
+    'code signatures and bundled-engine checks passed; explicit Login Items approval, '
+    'service startup and uninstall require manual acceptance. macOS packages use ad-hoc '
+    'signatures unless publisher signing is configured; unsigned Windows installers may '
+    'show OS trust warnings. Interactive GUI, tunnel and vendor acceptance is not claimed. '
     'No license server or feature activation is required.'
 )
 

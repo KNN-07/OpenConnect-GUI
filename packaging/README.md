@@ -328,9 +328,14 @@ No self-hosted runner registration is required:
 
 Installation runs use disposable hosted machines. Fedora's privileged container
 has its own cgroup/network namespaces and no host bind mounts. No preinstalled
-OpenConnect is permitted. macOS still requires actual service approval; hosted
-execution does not bypass that consent or turn approval-required into a pass.
-These hosted OS versions do not prove acceptance on macOS 13 or Windows 10.
+OpenConnect is permitted. Linux and Windows require installed doctor/service
+checks and idle uninstall. macOS verifies installation, code signatures and the
+bundled engine; `--allow-macos-pending-approval` also accepts a healthy, registered
+service explicitly awaiting Login Items approval. Engine, driver, endpoint-trust
+and other errors still fail. This boundary is recorded in the job summary and
+release notes: it does not bypass consent or claim macOS service startup or
+uninstall. Without that option, `packaging/smoke.py` retains the full lifecycle
+requirement. These hosted OS versions do not prove acceptance on macOS 13 or Windows 10.
 
 Optional environment secrets are `OCVPN_APP_SIGN_IDENTITY`,
 `OCVPN_INSTALLER_SIGN_IDENTITY`, `OCVPN_NOTARY_PROFILE`, and
@@ -354,8 +359,9 @@ git push origin v0.1.0
 ```
 
 Only a matching version-tag **push** publishes, after CI, every native package
-build, and every reference installation/idle-uninstall job succeeds. A manual
-dispatch on a tag is still a rehearsal. A version containing a SemVer prerelease
+build, Linux/Windows installation and idle uninstall, and the explicit macOS
+installation/approval-state checks succeed.
+A manual dispatch on a tag is still a rehearsal. A version containing a SemVer prerelease
 suffix is published as a prerelease and must match all manifests too.
 
 `.github/scripts/release.py` requires all four target artifact directories,

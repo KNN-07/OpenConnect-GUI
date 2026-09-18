@@ -36,13 +36,13 @@ case "$action" in
   }
   ;;
  install)
-  for directory in '/var/run/org.openconnectgui' '/Library/Application Support/OpenConnectGUI' '/Library/Application Support/OpenConnectGUI/network'; do
+  for directory in '/private/var/db/org.openconnectgui' '/Library/Application Support/OpenConnectGUI' '/Library/Application Support/OpenConnectGUI/network'; do
     [ ! -L "$directory" ] || exit 1
     /bin/mkdir -p "$directory"
     /usr/sbin/chown root:wheel "$directory"
     /bin/chmod 700 "$directory"
   done
-  /bin/chmod 755 /var/run/org.openconnectgui
+  /bin/chmod 755 /private/var/db/org.openconnectgui
   invoke install
   if [ "$(field approval_required)" = true ]; then
     echo 'Installed; service awaits explicit approval in System Settings > General > Login Items. No tunnel readiness is claimed.'

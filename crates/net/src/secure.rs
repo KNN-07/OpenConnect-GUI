@@ -15,7 +15,7 @@ pub(crate) fn root() -> PathBuf {
 }
 #[cfg(target_os = "macos")]
 pub(crate) fn root() -> PathBuf {
-    PathBuf::from("/private/var/run/org.openconnectgui/network")
+    PathBuf::from("/private/var/db/org.openconnectgui/network")
 }
 #[cfg(target_os = "linux")]
 pub(crate) fn journal_root() -> PathBuf {

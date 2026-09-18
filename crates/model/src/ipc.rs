@@ -8,8 +8,9 @@ pub const VERSION: u32 = 1;
 pub const MAX_FRAME_BYTES: usize = 1024 * 1024;
 #[cfg(target_os = "linux")]
 pub const CONTROL_ENDPOINT: &str = "/run/openconnect-gui/control.sock";
+// macOS /var/run is group-writable; endpoint ancestors must be protected.
 #[cfg(target_os = "macos")]
-pub const CONTROL_ENDPOINT: &str = "/var/run/org.openconnectgui/control.sock";
+pub const CONTROL_ENDPOINT: &str = "/private/var/db/org.openconnectgui/control.sock";
 #[cfg(windows)]
 pub const CONTROL_ENDPOINT: &str = r"\\.\pipe\OpenConnectGUI.control.v1";
 

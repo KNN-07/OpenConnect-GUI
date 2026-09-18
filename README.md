@@ -63,7 +63,7 @@ These are the protocols exposed by the bundled OpenConnect 9.21 engine—not a c
 
 ## Get started
 
-**Current status: source preview.** Native package recipes are included; this repository does not yet provide a validated, multi-platform binary release. Follow the [build and installation guide](packaging/README.md) for the desktop or CLI/TUI flavor.
+The [release workflow](.github/workflows/release.yml) publishes versioned installers to [GitHub Releases](https://github.com/KNN-07/OpenConnect-GUI/releases) only after its build and installation gates pass. Follow the [build and installation guide](packaging/README.md) for source builds, signing limitations and OS approval requirements. macOS service startup and uninstall require manual acceptance after explicit Login Items approval.
 
 After installing your build:
 
@@ -117,8 +117,8 @@ Unicode, masked password fields, bracketed paste, narrow terminals, and `NO_COLO
 | Platform | Current evidence |
 |---|---|
 | Linux x86_64 | Actual desktop and TUI operation; native protocol/browser fixtures; real dual-stack ocserv traffic, DNS, routing, and crash recovery. Ubuntu 22.04 baseline Debian/source installation and Fedora 42 CLI RPM installation exercised. |
-| macOS Intel / Apple Silicon | Native implementation and packaging routes included. Native execution and OS approval flows are not yet verified. |
-| Windows x86_64 | Native implementation and packaging routes included. GNU cross-checks are not a substitute for native Windows/MSVC, service, Wintun, or desktop acceptance. |
+| macOS Intel / Apple Silicon | GitHub-hosted native compilation, package installation, code signatures and bundled-engine execution exercised independently. Explicit service approval, startup/uninstall, desktop, keychain and tunnel acceptance remain manual. |
+| Windows x86_64 | Native Windows/MSVC compilation and release-gated package/idle-service checks. These do not establish Wintun/NRPT, desktop or live-tunnel acceptance. |
 
 Linux release builds target the Ubuntu 22.04 / GLIBC 2.35 baseline. The implementation includes transactional networking and recovery, but successful local fixtures are not vendor-appliance certification. All authorized vendor/OS interoperability rows remain explicitly unverified until backed by actual observations.
 

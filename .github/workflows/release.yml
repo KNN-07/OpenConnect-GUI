@@ -182,8 +182,14 @@ jobs:
         with:
           name: packages-${{ matrix.target }}
           path: artifacts
-      - name: Install with actual native authorization and approval
-        run: python3 packaging/smoke.py --select-gui artifacts "$PACKAGE_PATTERN"
+      - name: Verify native installation with explicit macOS approval boundary
+        run: |
+          args=()
+          if [[ "$RUNNER_OS" == macOS ]]; then args+=(--allow-macos-pending-approval); fi
+          python3 packaging/smoke.py "${args[@]}" --select-gui artifacts "$PACKAGE_PATTERN"
+      - name: Inspect macOS service registration
+        if: failure() && runner.os == 'macOS'
+        run: '"/Applications/OpenConnect GUI.app/Contents/MacOS/ocvpn-installer" status'
       - name: Diagnose macOS service registration failures
         if: failure() && runner.os == 'macOS'
         run: sudo /usr/bin/log show --last 15m --style compact --predicate '(process == "package_script_service" OR process == "backgroundtaskmanagementd" OR subsystem CONTAINS[c] "ServiceManagement")'

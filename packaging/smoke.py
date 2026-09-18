@@ -22,6 +22,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('package', type=Path, nargs='?')
     parser.add_argument('--select-gui', nargs=2, metavar=('DIRECTORY', 'GLOB'))
+    parser.add_argument('--allow-macos-pending-approval', action='store_true',
+                        help='Verify a healthy macOS install awaiting consent; do not claim service startup or uninstall')
     args = parser.parse_args()
     if os.environ.get('OCVPN_DISPOSABLE_RUNNER') != '1':
         raise SystemExit('Native install smoke requires an explicitly disposable runner')
@@ -38,6 +40,8 @@ def main():
     if shutil.which('openconnect'):
         raise SystemExit('Reference runner must not have system OpenConnect installed')
     system = platform.system()
+    if args.allow_macos_pending_approval and system != 'Darwin':
+        raise SystemExit('Pending-approval acceptance is macOS-only')
     if system == 'Linux':
         if package.suffix == '.deb':
             run(['sudo', 'apt-get', 'install', '-y', str(package)])
@@ -50,6 +54,7 @@ def main():
         run(['sudo', '/usr/sbin/installer', '-verboseR', '-dumplog', '-pkg', package, '-target', '/'])
         cli = Path('/Applications/OpenConnect GUI.app/Contents/MacOS/ocvpn')
         uninstall = ['sudo', '/Applications/OpenConnect GUI.app/Contents/Resources/uninstall']
+        run(['codesign', '--verify', '--deep', '--strict', cli.parents[2]])
     elif system == 'Windows':
         # Runner process must have native UAC/admin authorization. /S does not
         # bypass elevation or PowerShell execution policy.
@@ -64,7 +69,29 @@ def main():
     required = {'anyconnect', 'nc', 'pulse', 'gp', 'f5', 'fortinet', 'array'}
     if protocols.get('schema_version') != 1 or not required.issubset({p['id'] for p in protocols['data']['protocols']}):
         raise SystemExit('Installed bundled engine did not report all seven required protocols')
-    run([cli, 'doctor', '--json'])
+    if args.allow_macos_pending_approval:
+        doctor = subprocess.run([str(cli), 'doctor', '--json'], stdout=subprocess.PIPE, text=True)
+        print(doctor.stdout, end='', flush=True)
+        envelope = json.loads(doctor.stdout)
+        report = envelope['data']
+        service = report.get('service') or {}
+        if (doctor.returncode == 1 and envelope.get('schema_version') == 1
+                and report.get('capabilities') is not None and report.get('driver_ready') is True
+                and all(report.get(key) is None for key in ('engine_error', 'service_error', 'driver_error'))
+                and service.get('packaged') is True and service.get('registered') is True
+                and service.get('approval_required') is True and service.get('running') is False):
+            run([cli, 'service', 'status'])
+            boundary = ('macOS installation, code signatures, bundled protocols and pending-approval state verified. '
+                        'Explicit Login Items approval, service startup and uninstall require manual acceptance; '
+                        'no GUI, tunnel or vendor acceptance is claimed.')
+            print(boundary)
+            if summary := os.environ.get('GITHUB_STEP_SUMMARY'):
+                with Path(summary).open('a') as stream:
+                    stream.write(boundary + '\n')
+            return
+        doctor.check_returncode()
+    else:
+        run([cli, 'doctor', '--json'])
     run([cli, 'service', 'status'])
     run(uninstall)
     if cli.exists():
