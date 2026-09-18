@@ -259,6 +259,13 @@ execution-policy bypass. Organizational script policy can refuse optional PATH
 changes, ZIP/source installation or NRPT; that is an explicit failure, not
 silently disabled security. PATH removal is skipped if it was never opted into.
 
+The GUI package emits an early NSIS section so its native guard creates the
+protected root before Tauri's normal `SetOutPath`; the usual Tauri pre-install
+hook runs too late for that invariant. Silent failures retain their nonzero
+exit status without waiting for a modal acknowledgment. Windows reference
+smoke checks use the runner's PowerShell `Start-Process -Wait` to wait for the
+NSIS uninstaller and its temporary child, not just the launcher.
+
 For a standalone ZIP, extract it and run `resources/source-install.ps1 install`
 from an administrator PowerShell. It installs only into the same protected
 Known Folder, verifies a file manifest and calls the native service manager.
