@@ -16,7 +16,7 @@ SetCompressor /SOLID lzma
 !insertmacro MUI_LANGUAGE "English"
 Section "OpenConnect CLI/TUI and native service"
   SetRegView 64
-  !insertmacro NSIS_HOOK_PREINSTALL
+  !insertmacro OCVPN_PREINSTALL
   IfFileExists "$INSTDIR\uninstall.exe" 0 ocvpn_cli_fresh
     ExecWait '"$INSTDIR\uninstall.exe" /S _?=$INSTDIR' $0
     ${If} $0 != 0

@@ -7,7 +7,7 @@
   Pop $0
   Pop $1
   ${If} $0 != 0
-    MessageBox MB_ICONSTOP|MB_OK "The install/state paths are not protected. Files are preserved; reconcile ownership before continuing."
+    MessageBox MB_ICONSTOP|MB_OK "The install/state paths are not protected. Files are preserved; reconcile ownership before continuing." /SD IDOK
     SetErrorLevel 1
     Abort
   ${EndIf}
@@ -18,7 +18,7 @@
   Pop $0
   Pop $1
   ${If} $0 != 0
-    MessageBox MB_ICONSTOP|MB_OK "Native service management failed. Files are preserved. Run ocvpn service repair, then retry."
+    MessageBox MB_ICONSTOP|MB_OK "Native service management failed. Files are preserved. Run ocvpn service repair, then retry." /SD IDOK
     SetErrorLevel 1
     Abort
   ${EndIf}
@@ -27,7 +27,7 @@
   ${If} $1 == '{"registered":${Registered},"approval_required":false,"login_registered":false}'
   ${ElseIf} $1 == '{"registered":${Registered},"approval_required":false,"login_registered":true}'
   ${Else}
-    MessageBox MB_ICONSTOP|MB_OK "Native service registration or recovery is unresolved. The package operation is aborted before removing files."
+    MessageBox MB_ICONSTOP|MB_OK "Native service registration or recovery is unresolved. The package operation is aborted before removing files." /SD IDOK
     SetErrorLevel 1
     Abort
   ${EndIf}
@@ -40,22 +40,22 @@
   Pop $1
   ${EnableX64FSRedirection}
   ${If} $0 != 0
-    MessageBox MB_ICONSTOP|MB_OK "The optional machine PATH operation was denied. No execution policy was bypassed. Reconcile the PATH or retry without PATH registration."
+    MessageBox MB_ICONSTOP|MB_OK "The optional machine PATH operation was denied. No execution policy was bypassed. Reconcile the PATH or retry without PATH registration." /SD IDOK
     SetErrorLevel 1
     Abort
   ${EndIf}
 !macroend
 
-!macro NSIS_HOOK_PREINSTALL
+!macro OCVPN_PREINSTALL
   SetRegView 64
   ReadRegStr $0 HKLM "SOFTWARE\Microsoft\Windows NT\CurrentVersion" "CurrentBuildNumber"
   ${If} $0 < 19045
-    MessageBox MB_ICONSTOP|MB_OK "Windows 10 22H2 or Windows 11 is required."
+    MessageBox MB_ICONSTOP|MB_OK "Windows 10 22H2 or Windows 11 is required." /SD IDOK
     SetErrorLevel 1
     Abort
   ${EndIf}
   ${If} $INSTDIR != "$PROGRAMFILES64\OpenConnect GUI"
-    MessageBox MB_ICONSTOP|MB_OK "Install only in the machine Program Files\OpenConnect GUI directory."
+    MessageBox MB_ICONSTOP|MB_OK "Install only in the machine Program Files\OpenConnect GUI directory." /SD IDOK
     SetErrorLevel 1
     Abort
   ${EndIf}
@@ -72,7 +72,7 @@
     Goto ocvpn_prepared
   ocvpn_check_old:
   IfFileExists "$INSTDIR\ocvpnd.exe" 0 ocvpn_prepared
-    MessageBox MB_ICONSTOP|MB_OK "Existing service manager is missing. Repair the old installation before updating."
+    MessageBox MB_ICONSTOP|MB_OK "Existing service manager is missing. Repair the old installation before updating." /SD IDOK
     SetErrorLevel 1
     Abort
   ocvpn_prepared:

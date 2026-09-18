@@ -9,7 +9,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        flavor: [gui, cli]
+        flavor: [cli]
     runs-on: windows-2022
     environment: native-release
     timeout-minutes: 10

@@ -60,7 +60,11 @@ def main():
         # bypass elevation or PowerShell execution policy.
         run([package, '/S'])
         cli = Path(os.environ['ProgramW6432']) / 'OpenConnect GUI/ocvpn.exe'
-        uninstall = [cli.parent / 'uninstall.exe', '/S']
+        # NSIS hands uninstall to a temporary child process. Wait for that
+        # process tree, not just the launcher; do not race removal or add sleeps.
+        uninstaller = str(cli.parent / 'uninstall.exe').replace("'", "''")
+        uninstall = ['pwsh.exe', '-NoProfile', '-NonInteractive', '-Command',
+                     f"$p = Start-Process -FilePath '{uninstaller}' -ArgumentList '/S' -Wait -PassThru; exit $p.ExitCode"]
     else:
         raise SystemExit('Unsupported native runner')
     # Failures preserve the installed service and evidence for diagnosis, rather

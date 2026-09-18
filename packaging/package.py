@@ -338,7 +338,13 @@ def windows_package(payload, output, work, target, headless):
         if path.is_file() and path.name != 'ocvpn-gui.exe':
             resources[os.path.relpath(path, ROOT / 'apps/desktop/src-tauri').replace('\\', '/')] = path.relative_to(payload).as_posix()
     hooks = work / 'hooks.nsh'
-    text(hooks, f'!define OCVPN_GUARD "{guard}"\n!include "{ROOT / "packaging/windows/hooks.nsh"}"\n')
+    # Tauri's normal PREINSTALL hook runs after SetOutPath has already created
+    # an unprotected install root. An earlier section lets our native guard
+    # create/validate that root first, without weakening checks on old installs.
+    text(hooks, f'!define OCVPN_GUARD "{guard}"\n!include "{ROOT / "packaging/windows/hooks.nsh"}"\n'
+               'Section "-Protect machine installation"\n'
+               '  !insertmacro OCVPN_PREINSTALL\n'
+               'SectionEnd\n')
     config = {'bundle': {'active': True, 'targets': ['nsis'], 'resources': resources, 'windows': {'webviewInstallMode': {'type': 'offlineInstaller'}, 'nsis': {'installMode': 'perMachine', 'installerHooks': str(hooks), 'displayLanguageSelector': False}}}}
     if os.environ.get('OCVPN_WINDOWS_CERT_THUMBPRINT'):
         config['bundle']['windows'].update({'certificateThumbprint': os.environ['OCVPN_WINDOWS_CERT_THUMBPRINT'], 'digestAlgorithm': 'sha256', 'timestampUrl': 'https://timestamp.digicert.com', 'tsp': True})
