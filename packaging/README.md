@@ -286,10 +286,12 @@ dispatch, and calls from the release workflow. Its GitHub-hosted Ubuntu 22.04
 job checks workflow syntax with checksum-pinned actionlint, Rust formatting,
 Python syntax, canonical model export, the locked frontend production build,
 locked full-workspace tests, Clippy, and native loopback protocol fixtures.
-It does not run privileged tunnel labs or claim interactive browser acceptance.
-The final `checks` job fails if its prerequisite fails, is cancelled, or is
-skipped. Select that CI check in branch protection after its first successful
-run. PR CI receives no release secrets and never uses self-hosted runners.
+Additional GitHub-hosted macOS Intel/ARM and Windows jobs compile the full Rust
+workspace and test targets, so platform-specific Rust errors fail before release
+dependency builds. CI does not run privileged tunnel labs or claim interactive
+browser acceptance. The final `checks` job fails if any prerequisite fails, is
+cancelled, or is skipped. Select that CI check in branch protection after its
+first successful run. PR CI receives no release secrets and never uses self-hosted runners.
 
 `.github/workflows/release.yml` first checks that the Cargo workspace, desktop
 package, package-lock root/top-level versions, and Tauri version agree. Tag

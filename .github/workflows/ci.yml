@@ -96,18 +96,54 @@ jobs:
         # No privileged tunnel lab, installed service or interactive browser acceptance.
         run: cargo run --locked -p xtask -- verify protocols
 
+  native-check:
+    name: Native Rust compilation (${{ matrix.runner }})
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [macos-15-intel, macos-15, windows-2022]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    env:
+      MACOSX_DEPLOYMENT_TARGET: '13.0'
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22.19.0'
+          cache: npm
+          cache-dependency-path: apps/desktop/package-lock.json
+      - uses: ./.github/actions/setup-macos
+        if: runner.os == 'macOS'
+      - uses: ./.github/actions/setup-windows
+        if: runner.os == 'Windows'
+      - name: Prepare frontend assets
+        run: |
+          npm install --global npm@11.19.0
+          cargo run --locked -p ocvpn-model --example export_types
+          npm --prefix apps/desktop ci
+          npm --prefix apps/desktop run build
+      - name: Check native workspace and test targets
+        run: cargo check --locked --workspace --all-targets
+
   checks:
     name: checks
     if: ${{ always() }}
-    needs: [build]
+    needs: [build, native-check]
     runs-on: ubuntu-22.04
     timeout-minutes: 5
     steps:
       - name: Require every CI prerequisite to succeed
         env:
           BUILD_RESULT: ${{ needs.build.result }}
+          NATIVE_RESULT: ${{ needs.native-check.result }}
         run: |
-          if [ "$BUILD_RESULT" != success ]; then
-            echo "CI prerequisite did not succeed: $BUILD_RESULT" >&2
+          if [ "$BUILD_RESULT" != success ] || [ "$NATIVE_RESULT" != success ]; then
+            echo "CI prerequisites did not succeed: Linux=$BUILD_RESULT native=$NATIVE_RESULT" >&2
             exit 1
           fi
