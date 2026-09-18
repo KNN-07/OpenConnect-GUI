@@ -3,6 +3,9 @@
 set -eu
 # Run ONLY inside packaging/Dockerfile.release, from the repository mount.
 [ "$(. /etc/os-release; printf '%s' "$VERSION_ID")" = 22.04 ] || { echo 'Linux release build requires the Ubuntu 22.04 baseline image' >&2; exit 1; }
+# The checkout is owned by the hosted runner, while this disposable build
+# container runs as root. Trust only the explicitly mounted source directory.
+git config --global --add safe.directory "$(pwd)"
 curl --fail --location https://nodejs.org/dist/v22.19.0/node-v22.19.0-linux-x64.tar.xz -o /tmp/node.tar.xz
 echo 'c0649af18e6a24f6fe5535a3e86b341dd49a8e71117c8b68bde973ef834f16f2  /tmp/node.tar.xz' | sha256sum -c -
 tar -xJf /tmp/node.tar.xz -C /opt
