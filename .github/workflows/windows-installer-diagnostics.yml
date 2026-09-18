@@ -1,0 +1,26 @@
+name: Temporary Windows installer diagnosis
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  diagnose:
+    runs-on: windows-2022
+    environment: native-release
+    timeout-minutes: 10
+    env:
+      OCVPN_DISPOSABLE_RUNNER: '1'
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: packages-x86_64-pc-windows-msvc
+          path: artifacts
+          run-id: 35360716190
+          github-token: ${{ github.token }}
+      - name: Diagnose the actual installer and its own native dialogs
+        shell: pwsh
+        run: python -u .github/scripts/windows-installer-diagnostics.py
