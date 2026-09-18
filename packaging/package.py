@@ -22,7 +22,7 @@ import tempfile
 import zipfile
 
 ROOT = Path(__file__).resolve().parent.parent
-VERSION = json.loads((ROOT / 'apps/desktop/src-tauri/tauri.conf.json').read_text())['version']
+VERSION = json.loads((ROOT / 'apps/desktop/src-tauri/tauri.conf.json').read_text(encoding='utf-8'))['version']
 BINARIES = ['ocvpn', 'ocvpnd', 'ocvpn-net', 'ocvpn-installer', 'ocvpn-auth-callback']
 
 
@@ -44,7 +44,7 @@ def copy(source, destination, mode=0o644):
 
 def text(path, value, mode=0o644):
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(value)
+    path.write_text(value, encoding='utf-8')
     path.chmod(mode)
 
 
@@ -95,14 +95,14 @@ def legal(destination, headless):
                 copy(path, destination / 'rust' / name / path.name)
         inventory.append({'ecosystem': 'cargo', 'name': package['name'], 'version': package['version'], 'license': package.get('license'), 'source': package.get('source'), 'license_files': sorted(p.name for p in files if p.is_file())})
     if not headless:
-        lock = json.loads((ROOT / 'apps/desktop/package-lock.json').read_text())
+        lock = json.loads((ROOT / 'apps/desktop/package-lock.json').read_text(encoding='utf-8'))
         for relative, item in sorted(lock['packages'].items()):
             if not relative:
                 continue
             base = ROOT / 'apps/desktop' / relative
             if not (base / 'package.json').is_file() and item.get('optional'):
                 continue  # npm omits other platforms' optional build packages.
-            manifest = json.loads((base / 'package.json').read_text())
+            manifest = json.loads((base / 'package.json').read_text(encoding='utf-8'))
             files = [p for p in base.iterdir() if p.is_file() and p.name.upper().startswith(('LICENSE', 'LICENCE', 'COPYING', 'NOTICE', 'UNLICENSE'))]
             name = manifest['name'].replace('/', '_') + '-' + manifest['version']
             for path in files:
@@ -113,7 +113,7 @@ def legal(destination, headless):
 
 def native_input(target):
     stage = ROOT / 'target/native' / target / 'stage/ocvpn-native'
-    manifest = json.loads((stage / 'native-manifest.json').read_text())
+    manifest = json.loads((stage / 'native-manifest.json').read_text(encoding='utf-8'))
     if manifest['target'] != target or manifest['bridge_abi'] != 4 or manifest['hpke'] is not True:
         raise RuntimeError('Native target/ABI/HPKE manifest mismatch; rebuild pinned native sources')
     for relative, expected in manifest['files'].items():
@@ -169,7 +169,7 @@ def linux_packages(payload, output, work, headless, epoch):
     if not headless:
         dependencies += ', libwebkit2gtk-4.1-0, libgtk-3-0, libayatana-appindicator3-1, xdg-desktop-portal, xdg-desktop-portal-gtk | xdg-desktop-portal-kde, zenity'
     text(deb / 'DEBIAN/control', f'Package: {name}\nVersion: {VERSION}\nArchitecture: amd64\nMaintainer: OpenConnect GUI contributors\nSection: net\nPriority: optional\nLicense: GPL-3.0-only\nDepends: {dependencies}\nConflicts: {other}\nReplaces: {other}\nDescription: OpenConnect VPN client, CLI, TUI and privileged native service\n')
-    lifecycle = (ROOT / 'packaging/linux/lifecycle').read_text()
+    lifecycle = (ROOT / 'packaging/linux/lifecycle').read_text(encoding='utf-8')
     for script, command in [('preinst', 'prepare'), ('postinst', 'install'), ('prerm', 'remove')]:
         text(deb / 'DEBIAN' / script, f'#!/bin/sh\nOCVPN_PACKAGE_ACTION={command}\nexport OCVPN_PACKAGE_ACTION\n{lifecycle}', 0o755)
     run(['dpkg-deb', '--root-owner-group', '--build', deb, output / f'{name}_{VERSION}_amd64.deb'], env={**os.environ, 'SOURCE_DATE_EPOCH': str(epoch)})
@@ -266,7 +266,7 @@ def mac_payload(payload, release, native, licenses, headless):
             run(['codesign', '--force', '--options', 'runtime', '--timestamp=none' if identity == '-' else '--timestamp', '--sign', identity, path])
     native_root = contents / 'Resources/native'
     manifest_path = native_root / 'native-manifest.json'
-    manifest = json.loads(manifest_path.read_text())
+    manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
     manifest['files'] = {p.relative_to(native_root).as_posix(): digest(p) for p in sorted(native_root.rglob('*')) if p.is_file() and p != manifest_path}
     text(manifest_path, json.dumps(manifest, indent=2) + '\n')
     run(['codesign', '--force', '--options', 'runtime', '--sign', identity, callback.parent])
@@ -396,7 +396,7 @@ def distribution_native(stage, destination, licenses, target):
         raise RuntimeError('Legal inventory exceeds the installed reader bounds; consolidate license notices without dropping attribution before release')
     for path in files:
         path.read_text(encoding='utf-8')  # The installed reader is UTF-8, not a binary file browser.
-    manifest = json.loads((destination / 'native-manifest.json').read_text())
+    manifest = json.loads((destination / 'native-manifest.json').read_text(encoding='utf-8'))
     manifest['source_native_manifest_sha256'] = digest(stage / 'native-manifest.json')
     manifest['files'] = {p.relative_to(destination).as_posix(): digest(p) for p in sorted(destination.rglob('*')) if p.is_file() and p.name != 'native-manifest.json'}
     text(destination / 'native-manifest.json', json.dumps(manifest, indent=2) + '\n')
@@ -411,7 +411,7 @@ def source_archive(output, work, epoch, native, target):
     if (ROOT / '.git').exists():
         tracked = capture(['git', 'ls-files', '--cached', '-z'], cwd=ROOT).decode().split('\0')
     else:
-        tracked = json.loads((ROOT / 'source-inputs.json').read_text())['files']
+        tracked = json.loads((ROOT / 'source-inputs.json').read_text(encoding='utf-8'))['files']
     roots = {'apps', 'crates', 'native', 'packaging', 'xtask', '.cargo', '.github', 'Cargo.toml', 'Cargo.lock', 'rust-toolchain.toml', 'LICENSE', 'README.md', 'CHANGELOG.md', '.gitignore'}
     for relative in sorted(set(tracked)):
         if Path(relative).is_absolute() or '..' in Path(relative).parts:
@@ -430,7 +430,7 @@ def source_archive(output, work, epoch, native, target):
         run(['python3', ROOT / 'packaging/freeze-linux-sources.py', '--prefix', native, '--output', dependencies])
     else:
         raise RuntimeError('Set OCVPN_DEPENDENCY_SOURCES to the frozen prefix corresponding-source directory; a binary-only prefix cannot produce a redistributable source release')
-    manifest = json.loads((dependencies / 'sources.json').read_text())
+    manifest = json.loads((dependencies / 'sources.json').read_text(encoding='utf-8'))
     if manifest.get('schema_version') != 1 or not manifest.get('packages') or not manifest.get('files'):
         raise RuntimeError('Dependency source manifest is incomplete')
     for relative, expected in manifest['files'].items():
@@ -457,7 +457,7 @@ def main():
     if os.environ.get('SOURCE_DATE_EPOCH'):
         epoch = int(os.environ['SOURCE_DATE_EPOCH'])
     elif (ROOT / 'source-inputs.json').is_file():
-        epoch = int(json.loads((ROOT / 'source-inputs.json').read_text())['source_date_epoch'])
+        epoch = int(json.loads((ROOT / 'source-inputs.json').read_text(encoding='utf-8'))['source_date_epoch'])
     else:
         epoch = int(capture(['git', 'log', '-1', '--format=%ct'], cwd=ROOT).decode().strip())
     output = ROOT / 'target/packages' / target
